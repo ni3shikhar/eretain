@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Unit - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2>
+                <i class="fas fa-sitemap me-2"></i>
+                <span th:text="${isEdit ? 'Edit' : 'New'}">New</span> Unit
+            </h2>
+            <a th:href="@{/company/units}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="@{/company/units}" method="post">
+                    <input type="hidden" name="id" th:value="${unit['id']}" th:if="${isEdit}">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                   th:value="${unit['name']}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="code" class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="code" name="code"
+                                   th:value="${unit['code']}" required maxlength="10">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="businessUnitId" class="form-label">Business Unit <span class="text-danger">*</span></label>
+                        <select class="form-select" id="businessUnitId" name="businessUnitId" required>
+                            <option value="">-- Select Business Unit --</option>
+                            <option th:each="bu : ${businessUnits}"
+                                    th:value="${bu['id']}"
+                                    th:text="${bu['name']}"
+                                    th:selected="${unit['businessUnitId'] != null and unit['businessUnitId'].toString() == bu['id'].toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="3" th:text="${unit['description']}"></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                        <a th:href="@{/company/units}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

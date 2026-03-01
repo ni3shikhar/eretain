@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>AI Assistant</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="chat-container">
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="chat-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0 text-white">eRetain AI Assistant</h5>
+                        <small class="text-white-50">Ask about projects, allocations, timesheets &amp; utilization</small>
+                    </div>
+                </div>
+                <button id="clearChatBtn" class="btn btn-outline-light btn-sm" title="Clear conversation">
+                    <i class="fas fa-trash-alt me-1"></i>Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Messages Area -->
+        <div class="chat-messages" id="chatMessages">
+            <!-- Welcome message -->
+            <div class="message assistant-message">
+                <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <p>Hello! I'm the <strong>eRetain AI Assistant</strong>. I can help you with:</p>
+                        <ul>
+                            <li><i class="fas fa-project-diagram me-1"></i> <strong>Projects</strong> — status, details, team members</li>
+                            <li><i class="fas fa-user-clock me-1"></i> <strong>Allocations</strong> — who's assigned where, allocation %</li>
+                            <li><i class="fas fa-clock me-1"></i> <strong>Timesheets</strong> — hours logged, approval status</li>
+                            <li><i class="fas fa-chart-line me-1"></i> <strong>Utilization</strong> — employee utilization rates</li>
+                        </ul>
+                        <p class="mb-0">Try asking something like:<br>
+                            <em>"Show me all active projects"</em><br>
+                            <em>"Who is allocated to project X?"</em><br>
+                            <em>"What's the utilization for employee 3?"</em>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator" style="display: none;">
+            <div class="message assistant-message">
+                <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="message-bubble typing-bubble">
+                        <div class="typing-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <span class="typing-text">Analyzing data...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area">
+            <form id="chatForm" class="d-flex align-items-end gap-2">
+                <div class="flex-grow-1">
+                    <textarea id="chatInput" class="form-control"
+                              placeholder="Ask about projects, allocations, timesheets, or utilization..."
+                              rows="1" maxlength="2000" autofocus></textarea>
+                </div>
+                <button type="submit" id="sendBtn" class="btn btn-primary btn-send">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+            <div class="chat-footer-hint">
+                <small class="text-muted">Press Enter to send, Shift+Enter for new line</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+<script th:inline="javascript">
+document.addEventListener('DOMContentLoaded', function () {
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const chatForm = document.getElementById('chatForm');
+    const sendBtn = document.getElementById('sendBtn');
+    const clearChatBtn = document.getElementById('clearChatBtn');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    let isProcessing = false;
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    // Enter to send, Shift+Enter for new line
+    chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Send message
+    chatForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message || isProcessing) return;
+
+        // Add user message to UI
+        appendMessage('user', message);
+
+        // Clear input
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+
+        // Show typing indicator
+        isProcessing = true;
+        sendBtn.disabled = true;
+        typingIndicator.style.display = 'block';
+        scrollToBottom();
+
+        try {
+            const response = await fetch('/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+
+            const data = await response.json();
+
+            typingIndicator.style.display = 'none';
+
+            if (data.success) {
+                appendMessage('assistant', data.message);
+            } else {
+                appendMessage('assistant', '⚠️ ' + (data.message || 'Something went wrong. Please try again.'));
+            }
+        } catch (error) {
+            typingIndicator.style.display = 'none';
+            appendMessage('assistant', '⚠️ Network error. Please check your connection and try again.');
+        } finally {
+            isProcessing = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+    });
+
+    // Clear conversation
+    clearChatBtn.addEventListener('click', async function () {
+        if (!confirm('Clear the conversation history?')) return;
+
+        try {
+            await fetch('/chat/clear', { method: 'POST' });
+        } catch (e) { /* ignore */ }
+
+        // Keep only the welcome message
+        const messages = chatMessages.querySelectorAll('.message');
+        messages.forEach((msg, index) => {
+            if (index > 0) msg.remove();
+        });
+    });
+
+    function appendMessage(role, content) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}-message`;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.innerHTML = role === 'user'
+            ? '<i class="fas fa-user"></i>'
+            : '<i class="fas fa-robot"></i>';
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+
+        if (role === 'assistant') {
+            bubble.innerHTML = formatMarkdown(content);
+        } else {
+            bubble.textContent = content;
+        }
+
+        contentDiv.appendChild(bubble);
+        msgDiv.appendChild(avatar);
+        msgDiv.appendChild(contentDiv);
+        chatMessages.appendChild(msgDiv);
+
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
+
+    function formatMarkdown(text) {
+        if (!text) return '';
+
+        // Escape HTML
+        let html = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Code blocks
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // Tables (markdown-style)
+        html = html.replace(/^(\|.+\|)\n(\|[-:| ]+\|)\n((?:\|.+\|\n?)+)/gm, function(match, header, separator, body) {
+            let table = '<div class="table-responsive"><table class="table table-sm table-bordered mt-2 mb-2">';
+            // Header
+            table += '<thead><tr>';
+            header.split('|').filter(c => c.trim()).forEach(cell => {
+                table += '<th>' + cell.trim() + '</th>';
+            });
+            table += '</tr></thead>';
+            // Body
+            table += '<tbody>';
+            body.trim().split('\n').forEach(row => {
+                table += '<tr>';
+                row.split('|').filter(c => c.trim()).forEach(cell => {
+                    table += '<td>' + cell.trim() + '</td>';
+                });
+                table += '</tr>';
+            });
+            table += '</tbody></table></div>';
+            return table;
+        });
+
+        // Bold
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        // Italic
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // Unordered lists
+        html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+        html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        // Ordered lists
+        html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+        // Headers
+        html = html.replace(/^### (.+)$/gm, '<h6 class="mt-2 mb-1">$1</h6>');
+        html = html.replace(/^## (.+)$/gm, '<h5 class="mt-2 mb-1">$1</h5>');
+        html = html.replace(/^# (.+)$/gm, '<h4 class="mt-2 mb-1">$1</h4>');
+        // Line breaks
+        html = html.replace(/\n\n/g, '</p><p>');
+        html = html.replace(/\n/g, '<br>');
+        // Wrap in paragraph
+        if (!html.startsWith('<')) {
+            html = '<p>' + html + '</p>';
+        }
+
+        return html;
+    }
+
+    // Focus input on load
+    chatInput.focus();
+});
+</script>
+</div>
+</body>
+</html>

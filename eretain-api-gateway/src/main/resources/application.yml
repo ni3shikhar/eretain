@@ -1,0 +1,67 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: eretain-api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: lb://eretain-auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - AuthenticationFilter
+
+        - id: company-service
+          uri: lb://eretain-company-service
+          predicates:
+            - Path=/api/company/**
+          filters:
+            - AuthenticationFilter
+
+        - id: project-service
+          uri: lb://eretain-project-service
+          predicates:
+            - Path=/api/projects/**
+          filters:
+            - AuthenticationFilter
+
+        - id: allocation-service
+          uri: lb://eretain-allocation-service
+          predicates:
+            - Path=/api/allocations/**
+          filters:
+            - AuthenticationFilter
+
+        - id: timesheet-service
+          uri: lb://eretain-timesheet-service
+          predicates:
+            - Path=/api/timesheets/**
+          filters:
+            - AuthenticationFilter
+
+        - id: reporting-service
+          uri: lb://eretain-reporting-service
+          predicates:
+            - Path=/api/reports/**
+          filters:
+            - AuthenticationFilter
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+  main:
+    web-application-type: reactive
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+eretain:
+  jwt:
+    secret: eRetainSecretKeyForJWTTokenGenerationMustBe256BitsLong!!

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Timesheets - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-clock me-2"></i>Timesheets</h2>
+            <a th:href="@{/timesheets/new}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>New Timesheet
+            </a>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar" th:if="${timesheets != null and !timesheets.isEmpty()}">
+            <div class="row g-2">
+                <div class="col-md-2" th:if="${isAdminOrPmo}">
+                    <label>Employee</label>
+                    <input type="text" class="form-control" data-filter-col="1" placeholder="Search employee...">
+                </div>
+                <div class="col-md-2">
+                    <label>Status</label>
+                    <select class="form-select" th:data-filter-col="${isAdminOrPmo ? 4 : 3}">
+                        <option value="">All Statuses</option>
+                        <option value="DRAFT">DRAFT</option>
+                        <option value="SUBMITTED">SUBMITTED</option>
+                        <option value="APPROVED">APPROVED</option>
+                        <option value="REJECTED">REJECTED</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label>Week From</label>
+                    <input type="date" class="form-control" th:data-filter-col="${isAdminOrPmo ? 2 : 1}" data-filter-date="week" data-filter-range="from">
+                </div>
+                <div class="col-md-2">
+                    <label>Week To</label>
+                    <input type="date" class="form-control" th:data-filter-col="${isAdminOrPmo ? 2 : 1}" data-filter-date="week" data-filter-range="to">
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="button" class="btn btn-clear"><i class="fas fa-times me-1"></i>Clear</button>
+                </div>
+            </div>
+            <div id="filter-count" class="filter-count"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-hover" th:if="${timesheets != null and !timesheets.isEmpty()}">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th th:if="${isAdminOrPmo}">Employee</th>
+                            <th>Week Starting</th>
+                            <th>Total Hours</th>
+                            <th>Status</th>
+                            <th>Submitted On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="ts, iterStat : ${timesheets}">
+                            <td th:text="${iterStat.count}">1</td>
+                            <td th:if="${isAdminOrPmo}" th:text="${ts['employeeName'] ?: ts['employeeId']}">John Doe</td>
+                            <td th:text="${ts['weekStartDate']}">2024-01-01</td>
+                            <td>
+                                <strong th:text="${ts['totalHours'] != null ? ts['totalHours'] : '0.0'}">40.0</strong>
+                                <small class="text-muted">hrs</small>
+                            </td>
+                            <td>
+                                <span class="badge-status"
+                                      th:classappend="'badge-' + ${ts['status']}"
+                                      th:text="${ts['status']}">DRAFT</span>
+                            </td>
+                            <td th:text="${ts['submittedDate'] ?: '-'}">2024-01-07</td>
+                            <td class="action-btns">
+                                <a th:href="@{/timesheets/{id}(id=${ts['id']})}"
+                                   class="btn btn-sm btn-outline-info" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a th:href="@{/timesheets/{id}/edit(id=${ts['id']})}"
+                                   class="btn btn-sm btn-outline-primary" title="Edit"
+                                   th:if="${ts['status'] == 'DRAFT' or ts['status'] == 'REJECTED'}">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form th:action="@{/timesheets/{id}/submit(id=${ts['id']})}"
+                                      method="post" style="display:inline"
+                                      th:if="${ts['status'] == 'DRAFT'}">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Submit for Approval"
+                                            data-confirm="Are you sure you want to submit this timesheet for approval?">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                                <form th:action="@{/timesheets/{id}/delete(id=${ts['id']})}"
+                                      method="post" style="display:inline"
+                                      th:if="${ts['status'] == 'DRAFT'}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            data-confirm="Are you sure you want to delete this timesheet?">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="empty-state" th:if="${timesheets == null or timesheets.isEmpty()}">
+                    <i class="fas fa-clock"></i>
+                    <h5>No Timesheets Found</h5>
+                    <p>Create a new timesheet to start logging your time.</p>
+                    <a th:href="@{/timesheets/new}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>New Timesheet
+                    </a>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="card-footer" th:if="${totalPages != null and totalPages > 1}">
+                <nav>
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item" th:classappend="${currentPage == 0 ? 'disabled' : ''}">
+                            <a class="page-link" th:href="@{/timesheets(page=${currentPage - 1})}">Previous</a>
+                        </li>
+                        <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                            th:classappend="${i == currentPage ? 'active' : ''}">
+                            <a class="page-link" th:href="@{/timesheets(page=${i})}" th:text="${i + 1}">1</a>
+                        </li>
+                        <li class="page-item" th:classappend="${currentPage == totalPages - 1 ? 'disabled' : ''}">
+                            <a class="page-link" th:href="@{/timesheets(page=${currentPage + 1})}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

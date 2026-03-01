@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Timesheet Details - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-clock me-2"></i>Timesheet Details</h2>
+            <a th:href="@{/timesheets}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+
+        <!-- Timesheet Summary -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-info-circle me-2"></i>Timesheet Information</span>
+                <span class="badge-status"
+                      th:classappend="'badge-' + ${timesheet['status']}"
+                      th:text="${timesheet['status']}" style="font-size:0.9rem">DRAFT</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block small">Week Starting</strong>
+                        <span th:text="${timesheet['weekStartDate']}">2024-01-01</span>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block small">Total Hours</strong>
+                        <span class="fs-5 fw-bold" th:text="${timesheet['totalHours'] != null ? timesheet['totalHours'] : '0.0'}">40.0</span>
+                        <small class="text-muted">hrs</small>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block small">Submitted On</strong>
+                        <span th:text="${timesheet['submittedDate'] ?: 'Not submitted'}">2024-01-07</span>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <strong class="text-muted d-block small">Reviewed By</strong>
+                        <span th:text="${timesheet['reviewedByName'] ?: 'Pending'}">Admin</span>
+                    </div>
+                </div>
+
+                <!-- Rejection Reason -->
+                <div class="row" th:if="${timesheet['status'] == 'REJECTED' and timesheet['rejectionReason'] != null}">
+                    <div class="col-12">
+                        <div class="alert alert-danger mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Rejection Reason:</strong>
+                            <span th:text="${timesheet['rejectionReason']}">Incorrect hours</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card mb-4">
+            <div class="card-body d-flex gap-2 flex-wrap">
+                <!-- Submit button (for DRAFT timesheets owned by employee) -->
+                <form th:action="@{/timesheets/{id}/submit(id=${timesheet['id']})}" method="post"
+                      th:if="${timesheet['status'] == 'DRAFT'}">
+                    <button type="submit" class="btn btn-success"
+                            data-confirm="Submit this timesheet for approval?">
+                        <i class="fas fa-paper-plane me-1"></i>Submit for Approval
+                    </button>
+                </form>
+
+                <!-- Edit button (for DRAFT/REJECTED) -->
+                <a th:href="@{/timesheets/{id}/edit(id=${timesheet['id']})}" class="btn btn-primary"
+                   th:if="${timesheet['status'] == 'DRAFT' or timesheet['status'] == 'REJECTED'}">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+
+                <!-- Approve/Reject buttons (for SUBMITTED timesheets, admin/PMO only) -->
+                <span th:if="${isAdminOrPmo and timesheet['status'] == 'SUBMITTED'}">
+                    <form th:action="@{/timesheets/{id}/approve(id=${timesheet['id']})}" method="post"
+                          style="display:inline">
+                        <button type="submit" class="btn btn-success"
+                                data-confirm="Approve this timesheet?">
+                            <i class="fas fa-check me-1"></i>Approve
+                        </button>
+                    </form>
+
+                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="fas fa-times me-1"></i>Reject
+                    </button>
+                </span>
+            </div>
+        </div>
+
+        <!-- Time Entries -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list me-2"></i>Time Entries
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover" th:if="${timesheet['entries'] != null and !timesheet['entries'].isEmpty()}">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Project</th>
+                            <th>Date</th>
+                            <th>Hours</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="entry, iterStat : ${timesheet['entries']}">
+                            <td th:text="${iterStat.count}">1</td>
+                            <td th:text="${entry['projectName'] ?: entry['projectId']}">Project Alpha</td>
+                            <td th:text="${entry['entryDate']}">2024-01-01</td>
+                            <td><strong th:text="${entry['hours']}">8.0</strong></td>
+                            <td th:text="${entry['taskDescription'] ?: '-'}">Worked on feature</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <td colspan="3" class="text-end"><strong>Total Hours:</strong></td>
+                            <td><strong th:text="${timesheet['totalHours']}">40.0</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div class="empty-state p-4" th:if="${timesheet['entries'] == null or timesheet['entries'].isEmpty()}">
+                    <i class="fas fa-list"></i>
+                    <p class="mb-0">No time entries</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reject Modal -->
+        <div class="modal fade" id="rejectModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Reject Timesheet</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form th:action="@{/timesheets/{id}/reject(id=${timesheet['id']})}" method="post">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="rejectionReason" class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="rejectionReason" name="rejectionReason"
+                                          rows="3" required placeholder="Please provide a reason for rejecting this timesheet"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times me-1"></i>Reject
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

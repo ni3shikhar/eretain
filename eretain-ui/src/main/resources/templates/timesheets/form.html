@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Timesheet - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2>
+                <i class="fas fa-clock me-2"></i>
+                <span th:text="${isEdit ? 'Edit' : 'New'}">New</span> Timesheet
+            </h2>
+            <a th:href="@{/timesheets}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+
+        <!-- Warning toast for allocation limit -->
+        <div id="allocationWarning" class="alert alert-warning alert-dismissible fade d-none" role="alert"
+             style="position:fixed; top:80px; right:20px; z-index:9999; min-width:350px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="warningMessage">Hours exceed allocation limit!</span>
+            <button type="button" class="btn-close" onclick="dismissWarning()"></button>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <!-- No allocations warning -->
+                <div th:if="${allocations == null or allocations.isEmpty()}" class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You have no active project allocations. Please contact your PMO to get allocated to a project before creating a timesheet.
+                </div>
+
+                <form th:action="@{/timesheets}" method="post" id="timesheetForm"
+                      th:if="${allocations != null and !allocations.isEmpty()}">
+                    <input type="hidden" name="id" th:value="${timesheet['id']}" th:if="${isEdit}">
+
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label for="weekStartDate" class="form-label">Week Starting (Monday) <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="weekStartDate" name="weekStartDate"
+                                   th:value="${timesheet['weekStartDate']}" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="mt-1">
+                                <span class="badge bg-info" id="allocatedProjectsCount">
+                                    <span th:text="${#lists.size(allocations)}">0</span> allocated project(s)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="mb-3">Time Entries</h5>
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Only projects you are allocated to are shown. Hours are limited by your allocation per day.
+                        Maximum 8 hours per day and 40 hours per week.
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table" id="entriesTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:28%">Project (Allocated Hrs/Day)</th>
+                                    <th style="width:15%">Date</th>
+                                    <th style="width:12%">Hours</th>
+                                    <th style="width:35%">Task Description</th>
+                                    <th style="width:10%"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Existing entries (edit mode) -->
+                                <tr th:if="${isEdit}" th:each="entry, iterStat : ${timesheet['entries']}" class="entry-row">
+                                    <td>
+                                        <select class="form-select form-select-sm project-select"
+                                                th:name="'entries[' + ${iterStat.index} + '].projectId'" required
+                                                onchange="onProjectChange(this)">
+                                            <option value="">-- Select Project --</option>
+                                            <option th:each="a : ${allocations}"
+                                                    th:value="${a['projectId']}"
+                                                    th:text="${a['projectName']} + ' (' + ${a['hoursPerDay']} + ' hrs/day)'"
+                                                    th:attr="data-allocation-id=${a['id']},data-hours-per-day=${a['hoursPerDay']},data-start-date=${a['startDate']},data-end-date=${a['endDate']}"
+                                                    th:selected="${entry['projectId'] != null and entry['projectId'].toString() == a['projectId'].toString()}">
+                                            </option>
+                                        </select>
+                                        <input type="hidden" class="allocation-id-input"
+                                               th:name="'entries[' + ${iterStat.index} + '].allocationId'"
+                                               th:value="${entry['allocationId']}">
+                                    </td>
+                                    <td>
+                                        <input type="date" class="form-control form-control-sm entry-date"
+                                               th:name="'entries[' + ${iterStat.index} + '].entryDate'"
+                                               th:value="${entry['entryDate']}" required>
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm hours-input"
+                                               th:name="'entries[' + ${iterStat.index} + '].hours'"
+                                               th:value="${entry['hours']}" min="0.5" max="8" step="0.5" required
+                                               onchange="validateHours(this)" oninput="validateHours(this)">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm"
+                                               th:name="'entries[' + ${iterStat.index} + '].taskDescription'"
+                                               th:value="${entry['taskDescription']}"
+                                               placeholder="Describe your work">
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-entry">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- Default empty row (new mode) -->
+                                <tr th:unless="${isEdit}" class="entry-row">
+                                    <td>
+                                        <select class="form-select form-select-sm project-select"
+                                                name="entries[0].projectId" required
+                                                onchange="onProjectChange(this)">
+                                            <option value="">-- Select Project --</option>
+                                            <option th:each="a : ${allocations}"
+                                                    th:value="${a['projectId']}"
+                                                    th:text="${a['projectName']} + ' (' + ${a['hoursPerDay']} + ' hrs/day)'"
+                                                    th:attr="data-allocation-id=${a['id']},data-hours-per-day=${a['hoursPerDay']},data-start-date=${a['startDate']},data-end-date=${a['endDate']}">
+                                            </option>
+                                        </select>
+                                        <input type="hidden" class="allocation-id-input" name="entries[0].allocationId">
+                                    </td>
+                                    <td>
+                                        <input type="date" class="form-control form-control-sm entry-date"
+                                               name="entries[0].entryDate" required>
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm hours-input"
+                                               name="entries[0].hours" min="0.5" max="8" step="0.5" required
+                                               onchange="validateHours(this)" oninput="validateHours(this)">
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm"
+                                               name="entries[0].taskDescription"
+                                               placeholder="Describe your work">
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-entry">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="addEntry">
+                        <i class="fas fa-plus me-1"></i>Add Entry
+                    </button>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Total Hours: <span id="totalHours">0.0</span></strong>
+                            <span class="text-muted ms-2">(Max 40.0 per week)</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" id="saveBtn">
+                                <i class="fas fa-save me-1"></i>Save as Draft
+                            </button>
+                            <a th:href="@{/timesheets}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Inline script for allocation-aware dynamic entry rows -->
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                // Allocation data from server
+                var allocations = /*[[${allocations}]]*/ [];
+                var rowIndex = document.querySelectorAll('.entry-row').length;
+
+                // Build allocation lookup by projectId
+                var allocationMap = {};
+                allocations.forEach(function(a) {
+                    allocationMap[a.projectId] = {
+                        id: a.id,
+                        projectName: a.projectName,
+                        hoursPerDay: a.hoursPerDay,
+                        startDate: a.startDate,
+                        endDate: a.endDate
+                    };
+                });
+
+                // Build project options HTML for dynamic rows
+                function buildProjectOptions() {
+                    var options = '<option value="">-- Select Project --</option>';
+                    allocations.forEach(function(a) {
+                        options += '<option value="' + a.projectId + '"' +
+                            ' data-allocation-id="' + a.id + '"' +
+                            ' data-hours-per-day="' + a.hoursPerDay + '"' +
+                            ' data-start-date="' + (a.startDate || '') + '"' +
+                            ' data-end-date="' + (a.endDate || '') + '">' +
+                            a.projectName + ' (' + a.hoursPerDay + ' hrs/day)</option>';
+                    });
+                    return options;
+                }
+
+                // Add Entry button
+                document.getElementById('addEntry').addEventListener('click', function() {
+                    var tbody = document.querySelector('#entriesTable tbody');
+                    var row = document.createElement('tr');
+                    row.className = 'entry-row';
+                    row.innerHTML =
+                        '<td>' +
+                            '<select class="form-select form-select-sm project-select" name="entries[' + rowIndex + '].projectId" required onchange="onProjectChange(this)">' +
+                                buildProjectOptions() +
+                            '</select>' +
+                            '<input type="hidden" class="allocation-id-input" name="entries[' + rowIndex + '].allocationId">' +
+                        '</td>' +
+                        '<td><input type="date" class="form-control form-control-sm entry-date" name="entries[' + rowIndex + '].entryDate" required></td>' +
+                        '<td><input type="number" class="form-control form-control-sm hours-input" name="entries[' + rowIndex + '].hours" min="0.5" max="8" step="0.5" required onchange="validateHours(this)" oninput="validateHours(this)"></td>' +
+                        '<td><input type="text" class="form-control form-control-sm" name="entries[' + rowIndex + '].taskDescription" placeholder="Describe your work"></td>' +
+                        '<td><button type="button" class="btn btn-sm btn-outline-danger remove-entry"><i class="fas fa-times"></i></button></td>';
+                    tbody.appendChild(row);
+                    rowIndex++;
+                    bindRemoveButtons();
+                    updateTotalHours();
+                });
+
+                function bindRemoveButtons() {
+                    document.querySelectorAll('.remove-entry').forEach(function(btn) {
+                        btn.onclick = function() {
+                            if (document.querySelectorAll('.entry-row').length > 1) {
+                                this.closest('tr').remove();
+                                updateTotalHours();
+                            }
+                        };
+                    });
+                }
+
+                bindRemoveButtons();
+                updateTotalHours();
+
+                // Delegate for dynamically added inputs
+                document.getElementById('entriesTable').addEventListener('input', function(e) {
+                    if (e.target.classList.contains('hours-input')) {
+                        updateTotalHours();
+                    }
+                });
+
+                // Initialize existing rows (edit mode) — set allocation IDs based on selected project
+                document.querySelectorAll('.project-select').forEach(function(sel) {
+                    if (sel.value) {
+                        var opt = sel.options[sel.selectedIndex];
+                        var allocIdInput = sel.closest('tr').querySelector('.allocation-id-input');
+                        if (opt && opt.dataset.allocationId && allocIdInput) {
+                            allocIdInput.value = opt.dataset.allocationId;
+                        }
+                    }
+                });
+            });
+
+            // When a project is selected, set the allocation ID and update max hours
+            function onProjectChange(selectEl) {
+                var row = selectEl.closest('tr');
+                var allocIdInput = row.querySelector('.allocation-id-input');
+                var hoursInput = row.querySelector('.hours-input');
+                var opt = selectEl.options[selectEl.selectedIndex];
+
+                if (opt && opt.value) {
+                    allocIdInput.value = opt.dataset.allocationId || '';
+                    var maxHours = parseFloat(opt.dataset.hoursPerDay) || 8;
+                    hoursInput.max = maxHours;
+                    hoursInput.title = 'Max ' + maxHours + ' hrs/day for this allocation';
+
+                    // If current hours exceed the new max, clear and warn
+                    var currentHours = parseFloat(hoursInput.value) || 0;
+                    if (currentHours > maxHours) {
+                        hoursInput.value = maxHours;
+                        showWarning('Hours adjusted to ' + maxHours + ' (allocation limit for ' + opt.text.split('(')[0].trim() + ')');
+                    }
+                } else {
+                    allocIdInput.value = '';
+                    hoursInput.max = 8;
+                    hoursInput.title = '';
+                }
+                updateTotalHours();
+            }
+
+            // Validate hours against allocation limit
+            function validateHours(hoursInput) {
+                var row = hoursInput.closest('tr');
+                var projectSelect = row.querySelector('.project-select');
+                var opt = projectSelect.options[projectSelect.selectedIndex];
+
+                if (opt && opt.value) {
+                    var maxHours = parseFloat(opt.dataset.hoursPerDay) || 8;
+                    var enteredHours = parseFloat(hoursInput.value) || 0;
+
+                    if (enteredHours > maxHours) {
+                        hoursInput.value = maxHours;
+                        hoursInput.classList.add('is-invalid');
+                        showWarning('Cannot exceed ' + maxHours + ' hrs/day for "' + opt.text.split('(')[0].trim() + '". Hours set to maximum allowed.');
+                        setTimeout(function() { hoursInput.classList.remove('is-invalid'); }, 2000);
+                    } else {
+                        hoursInput.classList.remove('is-invalid');
+                    }
+                }
+
+                // Also check weekly total
+                updateTotalHours();
+                var total = parseFloat(document.getElementById('totalHours').textContent) || 0;
+                if (total > 40) {
+                    showWarning('Total weekly hours (' + total.toFixed(1) + ') exceed 40-hour weekly limit!');
+                }
+            }
+
+            function updateTotalHours() {
+                var total = 0;
+                document.querySelectorAll('.hours-input').forEach(function(input) {
+                    total += parseFloat(input.value) || 0;
+                });
+                var totalEl = document.getElementById('totalHours');
+                totalEl.textContent = total.toFixed(1);
+                if (total > 40) {
+                    totalEl.classList.add('text-danger');
+                } else {
+                    totalEl.classList.remove('text-danger');
+                }
+            }
+
+            function showWarning(message) {
+                var warningEl = document.getElementById('allocationWarning');
+                document.getElementById('warningMessage').textContent = message;
+                warningEl.classList.remove('d-none');
+                warningEl.classList.add('show');
+                // Auto-dismiss after 5 seconds
+                setTimeout(function() { dismissWarning(); }, 5000);
+            }
+
+            function dismissWarning() {
+                var warningEl = document.getElementById('allocationWarning');
+                warningEl.classList.remove('show');
+                warningEl.classList.add('d-none');
+            }
+
+            // Prevent form submission if hours exceed limits
+            document.addEventListener('DOMContentLoaded', function() {
+                var form = document.getElementById('timesheetForm');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        var total = parseFloat(document.getElementById('totalHours').textContent) || 0;
+                        if (total > 40) {
+                            e.preventDefault();
+                            showWarning('Cannot save: Total weekly hours (' + total.toFixed(1) + ') exceed the 40-hour limit. Please reduce hours.');
+                            return false;
+                        }
+
+                        // Validate each row's hours against allocation
+                        var rows = document.querySelectorAll('.entry-row');
+                        for (var i = 0; i < rows.length; i++) {
+                            var sel = rows[i].querySelector('.project-select');
+                            var hrs = rows[i].querySelector('.hours-input');
+                            if (sel && sel.value && hrs) {
+                                var opt = sel.options[sel.selectedIndex];
+                                var maxH = parseFloat(opt.dataset.hoursPerDay) || 8;
+                                var entH = parseFloat(hrs.value) || 0;
+                                if (entH > maxH) {
+                                    e.preventDefault();
+                                    showWarning('Cannot save: Hours for "' + opt.text.split('(')[0].trim() + '" exceed allocation limit of ' + maxH + ' hrs/day.');
+                                    hrs.focus();
+                                    return false;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>

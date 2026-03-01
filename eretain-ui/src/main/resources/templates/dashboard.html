@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>eRetain - Dashboard</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
+        </div>
+
+        <!-- Admin/PMO Summary Cards -->
+        <div sec:authorize="hasAnyRole('ADMINISTRATOR','PMO')">
+            <div class="row mb-4">
+                <div class="col-md-4 col-lg-2">
+                    <div class="stat-card bg-stat-primary">
+                        <div class="stat-value" th:text="${totalProjects != null ? totalProjects : 0}">0</div>
+                        <div class="stat-label">Projects</div>
+                        <div class="stat-icon"><i class="fas fa-project-diagram"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="stat-card bg-stat-success">
+                        <div class="stat-value" th:text="${activeProjects != null ? activeProjects : 0}">0</div>
+                        <div class="stat-label">Active Projects</div>
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="stat-card bg-stat-info">
+                        <div class="stat-value" th:text="${totalEmployees != null ? totalEmployees : 0}">0</div>
+                        <div class="stat-label">Employees</div>
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="stat-card bg-stat-warning">
+                        <div class="stat-value" th:text="${totalAllocations != null ? totalAllocations : 0}">0</div>
+                        <div class="stat-label">Allocations</div>
+                        <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="stat-card bg-stat-purple">
+                        <div class="stat-value" th:text="${pendingTimesheets != null ? pendingTimesheets : 0}">0</div>
+                        <div class="stat-label">Pending Timesheets</div>
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="stat-card bg-stat-danger">
+                        <div class="stat-value" th:text="${totalBusinessUnits != null ? totalBusinessUnits : 0}">0</div>
+                        <div class="stat-label">Business Units</div>
+                        <div class="stat-icon"><i class="fas fa-building"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Summary Cards -->
+        <div sec:authorize="hasRole('EMPLOYEE')">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card bg-stat-primary">
+                        <div class="stat-value" th:text="${myAllocations != null ? myAllocations : 0}">0</div>
+                        <div class="stat-label">My Allocations</div>
+                        <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card bg-stat-success">
+                        <div class="stat-value" th:text="${myApprovedTimesheets != null ? myApprovedTimesheets : 0}">0</div>
+                        <div class="stat-label">Approved Timesheets</div>
+                        <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card bg-stat-warning">
+                        <div class="stat-value" th:text="${myPendingTimesheets != null ? myPendingTimesheets : 0}">0</div>
+                        <div class="stat-label">Pending Timesheets</div>
+                        <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Recent Projects -->
+            <div class="col-lg-6" sec:authorize="hasAnyRole('ADMINISTRATOR','PMO')">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-project-diagram me-2"></i>Recent Projects</span>
+                        <a th:href="@{/projects}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0" th:if="${recentProjects != null and !recentProjects.isEmpty()}">
+                            <thead>
+                                <tr>
+                                    <th>Project Name</th>
+                                    <th>Status</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="project : ${recentProjects}">
+                                    <td th:text="${project['name'] ?: project['projectName']}">Project Alpha</td>
+                                    <td>
+                                        <span class="badge-status"
+                                              th:classappend="'badge-' + ${project['status']}"
+                                              th:text="${project['status']}">ACTIVE</span>
+                                    </td>
+                                    <td th:text="${project['projectType']}">T&amp;M</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="empty-state p-4" th:if="${recentProjects == null or recentProjects.isEmpty()}">
+                            <i class="fas fa-folder-open"></i>
+                            <p class="mb-0">No projects found</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Timesheets / Pending Approvals -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-clock me-2"></i>Recent Timesheets</span>
+                        <a th:href="@{/timesheets}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0" th:if="${recentTimesheets != null and !recentTimesheets.isEmpty()}">
+                            <thead>
+                                <tr>
+                                    <th>Week Starting</th>
+                                    <th>Total Hours</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="ts : ${recentTimesheets}">
+                                    <td th:text="${ts['weekStartDate']}">2024-01-01</td>
+                                    <td th:text="${ts['totalHours']}">40.0</td>
+                                    <td>
+                                        <span class="badge-status"
+                                              th:classappend="'badge-' + ${ts['status']}"
+                                              th:text="${ts['status']}">DRAFT</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="empty-state p-4" th:if="${recentTimesheets == null or recentTimesheets.isEmpty()}">
+                            <i class="fas fa-clock"></i>
+                            <p class="mb-0">No timesheets found</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-auto" sec:authorize="hasAnyRole('ADMINISTRATOR','PMO')">
+                                <a th:href="@{/projects/new}" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus me-1"></i>New Project
+                                </a>
+                            </div>
+                            <div class="col-auto" sec:authorize="hasAnyRole('ADMINISTRATOR','PMO')">
+                                <a th:href="@{/allocations/new}" class="btn btn-outline-success">
+                                    <i class="fas fa-user-plus me-1"></i>New Allocation
+                                </a>
+                            </div>
+                            <div class="col-auto">
+                                <a th:href="@{/timesheets/new}" class="btn btn-outline-info">
+                                    <i class="fas fa-plus-circle me-1"></i>New Timesheet
+                                </a>
+                            </div>
+                            <div class="col-auto">
+                                <a th:href="@{/reports}" class="btn btn-outline-warning">
+                                    <i class="fas fa-chart-bar me-1"></i>View Reports
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

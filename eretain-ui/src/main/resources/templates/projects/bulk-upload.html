@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/main}">
+<head><title>Bulk Upload Projects - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-file-upload me-2"></i>Bulk Upload Projects</h2>
+            <a th:href="@{/projects}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Projects
+            </a>
+        </div>
+
+        <!-- Instructions Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Upload Instructions</h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-3">
+                    <li>Download the <strong>sample template</strong> using the button below</li>
+                    <li>Fill in project data following the template format (CSV)</li>
+                    <li>Upload the completed CSV file</li>
+                    <li>Review the upload results for any errors</li>
+                </ol>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-columns me-1"></i>Required Columns:</h6>
+                        <ul class="small">
+                            <li><strong>Project Code</strong> — Unique identifier (e.g., PRJ-001)</li>
+                            <li><strong>Project Name</strong> — Name of the project</li>
+                            <li><strong>Project Type</strong> — FIXED_PRICE, TIME_AND_MATERIAL, RETAINER, INTERNAL, SUPPORT</li>
+                            <li><strong>Billability Category</strong> — BILLABLE, NON_BILLABLE, INTERNAL, INVESTMENT</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-columns me-1"></i>Optional Columns:</h6>
+                        <ul class="small">
+                            <li><strong>Description</strong> — Project description</li>
+                            <li><strong>Status</strong> — PROPOSED (default), ACTIVE, ON_HOLD, COMPLETED, CANCELLED</li>
+                            <li><strong>Client Name</strong> — Client/customer name</li>
+                            <li><strong>Start Date</strong> — Format: yyyy-MM-dd (e.g., 2026-04-01)</li>
+                            <li><strong>End Date</strong> — Format: yyyy-MM-dd (e.g., 2026-12-31)</li>
+                            <li><strong>Budget</strong> — Numeric value (e.g., 100000.00)</li>
+                            <li><strong>Currency</strong> — 3-letter code (default: USD)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a th:href="@{/projects/bulk-upload/template}" class="btn btn-outline-primary">
+                        <i class="fas fa-download me-1"></i>Download Sample Template
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Form Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Upload CSV File</h5>
+            </div>
+            <div class="card-body">
+                <form th:action="@{/projects/bulk-upload}" method="post" enctype="multipart/form-data"
+                      id="uploadForm">
+                    <div class="row align-items-end">
+                        <div class="col-md-8">
+                            <label for="file" class="form-label">Select CSV File</label>
+                            <input type="file" class="form-control" id="file" name="file"
+                                   accept=".csv" required>
+                            <div class="form-text">Only .csv files are accepted. Maximum recommended: 500 records per upload.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100" id="uploadBtn">
+                                <i class="fas fa-cloud-upload-alt me-1"></i>Upload &amp; Process
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Upload Results -->
+        <div th:if="${uploadResult != null}" class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Upload Results</h5>
+                <div>
+                    <span class="badge bg-secondary me-2"
+                          th:text="'Total: ' + ${uploadResult['totalRecords']}">Total: 0</span>
+                    <span class="badge bg-success me-2"
+                          th:text="'Success: ' + ${uploadResult['successCount']}">Success: 0</span>
+                    <span class="badge bg-danger"
+                          th:text="'Failed: ' + ${uploadResult['failureCount']}">Failed: 0</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Summary Progress Bar -->
+                <div class="p-3" th:if="${uploadResult['totalRecords'] > 0}">
+                    <div class="progress" style="height: 24px;">
+                        <div class="progress-bar bg-success"
+                             th:style="'width: ' + ${uploadResult['totalRecords'] > 0 ? (uploadResult['successCount'] * 100 / uploadResult['totalRecords']) : 0} + '%'"
+                             th:text="${uploadResult['successCount']} + ' succeeded'">
+                        </div>
+                        <div class="progress-bar bg-danger"
+                             th:style="'width: ' + ${uploadResult['totalRecords'] > 0 ? (uploadResult['failureCount'] * 100 / uploadResult['totalRecords']) : 0} + '%'"
+                             th:text="${uploadResult['failureCount']} + ' failed'">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Table -->
+                <table class="table table-hover mb-0" th:if="${uploadResult['results'] != null and !uploadResult['results'].isEmpty()}">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">Row #</th>
+                            <th>Project Code</th>
+                            <th>Project Name</th>
+                            <th style="width: 100px;">Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="r : ${uploadResult['results']}"
+                            th:classappend="${r['status'] == 'FAILED'} ? 'table-danger' : 'table-success'">
+                            <td th:text="${r['rowNumber']}">1</td>
+                            <td th:text="${r['projectCode'] != null ? r['projectCode'] : '-'}">PRJ-001</td>
+                            <td th:text="${r['projectName'] != null ? r['projectName'] : '-'}">Sample Project</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${r['status'] == 'SUCCESS'} ? 'bg-success' : 'bg-danger'"
+                                      th:text="${r['status']}">SUCCESS</span>
+                            </td>
+                            <td>
+                                <small th:text="${r['reason']}">Project created successfully</small>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script>
+            document.getElementById('uploadForm').addEventListener('submit', function() {
+                var btn = document.getElementById('uploadBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+            });
+        </script>
+    </div>
+</body>
+</html>

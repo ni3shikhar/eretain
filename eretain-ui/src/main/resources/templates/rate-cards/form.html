@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title th:text="${isEdit} ? 'Edit Rate Card' : 'New Rate Card'">Rate Card Form - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2>
+                <i class="fas fa-dollar-sign me-2"></i>
+                <span th:text="${isEdit} ? 'Edit Rate Card' : 'New Rate Card'">Rate Card Form</span>
+            </h2>
+            <a th:href="@{/rate-cards}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to List
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="@{/rate-cards}" method="post">
+                    <input type="hidden" name="id" th:value="${rateCard['id']}" th:if="${isEdit}"/>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="roleName" class="form-label">Role Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="roleName" name="roleName"
+                                   th:value="${rateCard['roleName']}" required
+                                   placeholder="e.g. Software Engineer, Tech Lead">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="currency" class="form-label">Currency</label>
+                            <select class="form-select" id="currency" name="currency">
+                                <option value="USD" th:selected="${rateCard['currency'] == null or rateCard['currency'] == 'USD'}">USD</option>
+                                <option value="EUR" th:selected="${rateCard['currency'] == 'EUR'}">EUR</option>
+                                <option value="GBP" th:selected="${rateCard['currency'] == 'GBP'}">GBP</option>
+                                <option value="INR" th:selected="${rateCard['currency'] == 'INR'}">INR</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="audaxRate" class="form-label">Audax Rate (per hour) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                <input type="number" class="form-control" id="audaxRate" name="audaxRate"
+                                       th:value="${rateCard['audaxRate']}" required min="0.01" step="0.01"
+                                       placeholder="0.00">
+                            </div>
+                            <div class="form-text">Standard Audax hourly rate</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="fixedFeeRate" class="form-label">Fixed Fee Rate (per hour) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                <input type="number" class="form-control" id="fixedFeeRate" name="fixedFeeRate"
+                                       th:value="${rateCard['fixedFeeRate']}" required min="0.01" step="0.01"
+                                       placeholder="0.00">
+                            </div>
+                            <div class="form-text">Fixed fee project hourly rate</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="tmRate" class="form-label">T&amp;M Rate (per hour) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                <input type="number" class="form-control" id="tmRate" name="tmRate"
+                                       th:value="${rateCard['tmRate']}" required min="0.01" step="0.01"
+                                       placeholder="0.00">
+                            </div>
+                            <div class="form-text">Time &amp; Materials hourly rate</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="2"
+                                      th:text="${rateCard['description']}"
+                                      placeholder="Optional description for this rate card"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            <span th:text="${isEdit} ? 'Update Rate Card' : 'Create Rate Card'">Save</span>
+                        </button>
+                        <a th:href="@{/rate-cards}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

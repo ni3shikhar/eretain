@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Allocations - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-tasks me-2"></i>Allocations</h2>
+            <a th:href="@{/allocations/new}" class="btn btn-primary" th:if="${isAdminOrPmo}">
+                <i class="fas fa-plus me-1"></i>New Allocation
+            </a>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar" th:if="${allocations != null and !allocations.isEmpty()}">
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <label>Employee</label>
+                    <input type="text" class="form-control" data-filter-col="1" placeholder="Search employee...">
+                </div>
+                <div class="col-md-2">
+                    <label>Project</label>
+                    <input type="text" class="form-control" data-filter-col="2" placeholder="Search project...">
+                </div>
+                <div class="col-md-2">
+                    <label>Role</label>
+                    <input type="text" class="form-control" data-filter-col="3" placeholder="Search role...">
+                </div>
+                <div class="col-md-2">
+                    <label>Status</label>
+                    <select class="form-select" data-filter-col="7">
+                        <option value="">All Statuses</option>
+                        <option value="PROPOSED">PROPOSED</option>
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="ON_HOLD">ON_HOLD</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="button" class="btn btn-clear"><i class="fas fa-times me-1"></i>Clear</button>
+                </div>
+            </div>
+            <div id="filter-count" class="filter-count"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-hover" th:if="${allocations != null and !allocations.isEmpty()}">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Employee</th>
+                            <th>Project</th>
+                            <th>Role</th>
+                            <th>Hours/Day</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="a, iterStat : ${allocations}">
+                            <td th:text="${iterStat.count}">1</td>
+                            <td th:text="${a['employeeName'] ?: a['employeeId']}">John Doe</td>
+                            <td th:text="${a['projectName'] ?: a['projectId']}">Project Alpha</td>
+                            <td th:text="${a['roleName'] ?: '-'}">Developer</td>
+                            <td th:text="${a['hoursPerDay']}">8.0</td>
+                            <td th:text="${a['startDate']}">2024-01-01</td>
+                            <td th:text="${a['endDate']}">2024-12-31</td>
+                            <td>
+                                <span class="badge-status"
+                                      th:classappend="'badge-' + ${a['status']}"
+                                      th:text="${a['status']}">ACTIVE</span>
+                            </td>
+                            <td class="action-btns">
+                                <a th:href="@{/allocations/{id}(id=${a['id']})}"
+                                   class="btn btn-sm btn-outline-info" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <span th:if="${isAdminOrPmo}">
+                                    <a th:href="@{/allocations/{id}/edit(id=${a['id']})}"
+                                       class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form th:action="@{/allocations/{id}/delete(id=${a['id']})}"
+                                          method="post" style="display:inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                data-confirm="Are you sure you want to delete this allocation?">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="empty-state" th:if="${allocations == null or allocations.isEmpty()}">
+                    <i class="fas fa-tasks"></i>
+                    <h5>No Allocations Found</h5>
+                    <p>No resource allocations have been created yet.</p>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="card-footer" th:if="${totalPages != null and totalPages > 1}">
+                <nav>
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item" th:classappend="${currentPage == 0 ? 'disabled' : ''}">
+                            <a class="page-link" th:href="@{/allocations(page=${currentPage - 1})}">Previous</a>
+                        </li>
+                        <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                            th:classappend="${i == currentPage ? 'active' : ''}">
+                            <a class="page-link" th:href="@{/allocations(page=${i})}" th:text="${i + 1}">1</a>
+                        </li>
+                        <li class="page-item" th:classappend="${currentPage == totalPages - 1 ? 'disabled' : ''}">
+                            <a class="page-link" th:href="@{/allocations(page=${currentPage + 1})}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

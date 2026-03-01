@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Allocation Report - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-tasks me-2"></i>Allocation Report</h2>
+            <a th:href="@{/reports}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Reports
+            </a>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form th:action="@{/reports/allocations}" method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Project</label>
+                        <select name="projectId" class="form-select">
+                            <option value="">All Projects</option>
+                            <option th:each="project : ${projects}"
+                                    th:value="${project['id']}"
+                                    th:text="${project['name']}"
+                                    th:selected="${project['id'].toString() == projectId}">Project</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i>Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4" th:if="${summary != null}">
+            <div class="col-md-3">
+                <div class="stat-card stat-card-primary">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-value" th:text="${summary['totalAllocations'] ?: 0}">0</div>
+                    <div class="stat-label">Total Allocations</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-success">
+                    <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+                    <div class="stat-value" th:text="${summary['activeAllocations'] ?: 0}">0</div>
+                    <div class="stat-label">Active</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-info">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value" th:text="${summary['totalHoursPerDay'] ?: '0'}">0</div>
+                    <div class="stat-label">Total Hrs/Day</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon"><i class="fas fa-user-friends"></i></div>
+                    <div class="stat-value" th:text="${summary['uniqueEmployees'] ?: 0}">0</div>
+                    <div class="stat-label">Unique Employees</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Allocation Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Allocations</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Project</th>
+                                <th>Role</th>
+                                <th>Hours/Day</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Status</th>
+                                <th>Billability</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="alloc : ${reportData}" th:if="${reportData != null}">
+                                <td th:text="${alloc['employeeName'] ?: ('Employee #' + alloc['employeeId'])}">Employee</td>
+                                <td th:text="${alloc['projectName']}">Project</td>
+                                <td th:text="${alloc['roleName'] ?: alloc['role'] ?: '-'}">Role</td>
+                                <td th:text="${alloc['hoursPerDay']}">8</td>
+                                <td th:text="${alloc['startDate']}">2024-01-01</td>
+                                <td th:text="${alloc['endDate']}">2024-12-31</td>
+                                <td>
+                                    <span class="badge" 
+                                          th:classappend="'badge-' + ${alloc['allocationStatus'] ?: alloc['status']}"
+                                          th:text="${alloc['allocationStatus'] ?: alloc['status']}">Active</span>
+                                </td>
+                                <td th:text="${alloc['billabilityCategory'] ?: '-'}">Billable</td>
+                            </tr>
+                            <tr th:if="${reportData == null or #lists.isEmpty(reportData)}">
+                                <td colspan="8" class="text-center text-muted">No allocations found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

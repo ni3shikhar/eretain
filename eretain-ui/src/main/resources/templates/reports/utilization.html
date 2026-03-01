@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Utilization Report - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-chart-pie me-2"></i>Utilization Report</h2>
+            <a th:href="@{/reports}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Reports
+            </a>
+        </div>
+
+        <!-- ========== ADMIN/PMO: Hierarchical Drill-Down View ========== -->
+        <div th:if="${hierarchyView}">
+
+            <!-- Date Range Filter -->
+            <div class="card mb-4">
+                <div class="card-body py-2">
+                    <form th:action="@{/reports/utilization}" method="get" class="row align-items-end g-2">
+                        <input type="hidden" name="level" th:value="${currentLevel != 'OVERVIEW' ? currentLevel : ''}" th:if="${currentLevel != 'OVERVIEW'}" />
+                        <input type="hidden" name="id" th:value="${currentId}" th:if="${currentId != null}" />
+                        <input type="hidden" name="breadcrumb" th:value="${breadcrumb}" th:if="${breadcrumb != null and breadcrumb != ''}" />
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm mb-1">Start Date</label>
+                            <input type="date" class="form-control form-control-sm" name="startDate" th:value="${startDate}" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm mb-1">End Date</label>
+                            <input type="date" class="form-control form-control-sm" name="endDate" th:value="${endDate}" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>Apply</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Breadcrumb Navigation -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb" id="utilBreadcrumb">
+                    <li class="breadcrumb-item" th:classappend="${currentLevel == 'OVERVIEW' ? 'active' : ''}">
+                        <a th:if="${currentLevel != 'OVERVIEW'}"
+                           th:href="@{/reports/utilization(startDate=${startDate},endDate=${endDate})}">
+                            <i class="fas fa-building me-1"></i>All Business Units
+                        </a>
+                        <span th:if="${currentLevel == 'OVERVIEW'}"><i class="fas fa-building me-1"></i>All Business Units</span>
+                    </li>
+                    <!-- Dynamic breadcrumb segments rendered by JavaScript -->
+                </ol>
+            </nav>
+
+            <!-- Summary Stats when drilled into a specific node -->
+            <div class="row g-3 mb-4" th:if="${currentNode != null}">
+                <div class="col-md-3">
+                    <div class="stat-card stat-card-primary">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-value" th:text="${currentNode['headCount'] ?: 0}">0</div>
+                        <div class="stat-label">Head Count</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-card-success">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-value" th:text="${#numbers.formatDecimal(currentNode['totalAvailableHours'] ?: 0, 1, 0)}">0</div>
+                        <div class="stat-label">Available Hours</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-card-info">
+                        <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="stat-value" th:text="${#numbers.formatDecimal(currentNode['totalAllocatedHours'] ?: 0, 1, 0)}">0</div>
+                        <div class="stat-label">Allocated Hours</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card"
+                         th:with="pct=${currentNode['utilizationPercentage'] ?: 0}"
+                         th:classappend="${pct >= 80 ? 'stat-card-success' : (pct >= 50 ? 'stat-card-warning' : 'stat-card-danger')}">
+                        <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                        <div class="stat-value"><span th:text="${#numbers.formatDecimal(pct, 1, 1)}">0</span>%</div>
+                        <div class="stat-label">Utilization</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hierarchy Table -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <span th:if="${currentLevel == 'OVERVIEW'}">Business Units</span>
+                        <span th:if="${currentLevel == 'BUSINESS_UNIT'}">Units in <span th:text="${currentNode != null ? currentNode['name'] : ''}"></span></span>
+                        <span th:if="${currentLevel == 'UNIT'}">Delivery Units in <span th:text="${currentNode != null ? currentNode['name'] : ''}"></span></span>
+                        <span th:if="${currentLevel == 'DELIVERY_UNIT'}">Projects in <span th:text="${currentNode != null ? currentNode['name'] : ''}"></span></span>
+                        <span th:if="${currentLevel == 'PROJECT'}">Employees on <span th:text="${currentNode != null ? currentNode['name'] : ''}"></span></span>
+                        <span th:if="${currentLevel == 'EMPLOYEE'}">Allocation Details for <span th:text="${currentNode != null ? currentNode['name'] : ''}"></span></span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" th:if="${children != null and #lists.size(children) > 0}">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th th:if="${currentLevel != 'EMPLOYEE'}" class="text-center">Code</th>
+                                    <th class="text-center">Head Count</th>
+                                    <th class="text-center">Available Hrs</th>
+                                    <th class="text-center">Allocated Hrs</th>
+                                    <th style="min-width:200px">Utilization</th>
+                                    <th th:if="${currentLevel == 'OVERVIEW' or currentLevel == 'BUSINESS_UNIT' or currentLevel == 'UNIT'}" class="text-center">Projects</th>
+                                    <th th:if="${currentLevel == 'DELIVERY_UNIT' or currentLevel == 'PROJECT'}" class="text-center">Allocations</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="child : ${children}" style="cursor:pointer;"
+                                    th:data-level="${child['level']}"
+                                    th:data-id="${child['id']}"
+                                    th:data-name="${child['name']}">
+                                    <td>
+                                        <a th:if="${child['level'] != 'EMPLOYEE'}"
+                                           class="text-decoration-none fw-semibold drill-link"
+                                           th:data-level="${child['level']}"
+                                           th:data-id="${child['id']}"
+                                           th:data-name="${child['name']}"
+                                           href="javascript:void(0)">
+                                            <i class="fas me-1"
+                                               th:classappend="${child['level'] == 'BUSINESS_UNIT' ? 'fa-building' :
+                                                                (child['level'] == 'UNIT' ? 'fa-sitemap' :
+                                                                (child['level'] == 'DELIVERY_UNIT' ? 'fa-layer-group' :
+                                                                (child['level'] == 'PROJECT' ? 'fa-project-diagram' : 'fa-user')))}"></i>
+                                            <span th:text="${child['name']}">Name</span>
+                                        </a>
+                                        <span th:if="${child['level'] == 'EMPLOYEE'}">
+                                            <i class="fas fa-user me-1"></i>
+                                            <span th:text="${child['name']}">Name</span>
+                                        </span>
+                                    </td>
+                                    <td th:if="${currentLevel != 'EMPLOYEE'}" class="text-center">
+                                        <span class="badge bg-light text-dark" th:text="${child['code'] ?: '-'}">-</span>
+                                    </td>
+                                    <td class="text-center" th:text="${child['headCount'] ?: 0}">0</td>
+                                    <td class="text-center" th:text="${#numbers.formatDecimal(child['totalAvailableHours'] ?: 0, 1, 0)}">0</td>
+                                    <td class="text-center" th:text="${#numbers.formatDecimal(child['totalAllocatedHours'] ?: 0, 1, 0)}">0</td>
+                                    <td th:with="pct=${child['utilizationPercentage'] ?: 0}">
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 10px;">
+                                                <div class="progress-bar" role="progressbar"
+                                                     th:style="'width: ' + ${pct > 100 ? 100 : pct} + '%'"
+                                                     th:classappend="${pct >= 80 ? 'bg-success' : (pct >= 50 ? 'bg-warning' : 'bg-danger')}">
+                                                </div>
+                                            </div>
+                                            <strong style="min-width:50px"
+                                                    th:classappend="${pct >= 80 ? 'text-success' : (pct >= 50 ? 'text-warning' : 'text-danger')}"
+                                                    th:text="${#numbers.formatDecimal(pct, 1, 1)} + '%'">0%</strong>
+                                        </div>
+                                    </td>
+                                    <td th:if="${currentLevel == 'OVERVIEW' or currentLevel == 'BUSINESS_UNIT' or currentLevel == 'UNIT'}" class="text-center"
+                                        th:text="${child['activeProjects'] ?: 0}">0</td>
+                                    <td th:if="${currentLevel == 'DELIVERY_UNIT' or currentLevel == 'PROJECT'}" class="text-center"
+                                        th:text="${child['totalAllocations'] ?: 0}">0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div th:if="${children == null or #lists.size(children) == 0}" class="text-center text-muted py-5">
+                            <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
+                            No data available at this level.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="mt-3 small text-muted">
+                <span class="me-3"><span class="badge bg-success">&nbsp;</span> &ge; 80% Utilization</span>
+                <span class="me-3"><span class="badge bg-warning">&nbsp;</span> 50-79% Utilization</span>
+                <span><span class="badge bg-danger">&nbsp;</span> &lt; 50% Utilization</span>
+            </div>
+
+            <!-- Drill-down navigation script -->
+            <script th:inline="javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    var currentLevel = /*[[${currentLevel}]]*/ 'OVERVIEW';
+                    var currentId = /*[[${currentId}]]*/ null;
+                    var breadcrumb = /*[[${breadcrumb}]]*/ '';
+                    var startDate = /*[[${startDate}]]*/ '';
+                    var endDate = /*[[${endDate}]]*/ '';
+
+                    // Build breadcrumb navigation from the breadcrumb string
+                    var bcContainer = document.getElementById('utilBreadcrumb');
+                    if (breadcrumb && breadcrumb.length > 0) {
+                        var segments = breadcrumb.split('|');
+                        for (var i = 0; i < segments.length; i++) {
+                            var seg = segments[i];
+                            if (!seg) continue;
+                            var colonIdx = seg.indexOf(':');
+                            if (colonIdx < 0) continue;
+                            var segLevel = seg.substring(0, colonIdx);
+                            var rest = seg.substring(colonIdx + 1);
+                            var colonIdx2 = rest.indexOf(':');
+                            var segId, segName;
+                            if (colonIdx2 >= 0) {
+                                segId = rest.substring(0, colonIdx2);
+                                segName = rest.substring(colonIdx2 + 1);
+                            } else {
+                                segId = rest;
+                                segName = rest;
+                            }
+
+                            var li = document.createElement('li');
+                            li.className = 'breadcrumb-item';
+                            var isLast = (i === segments.length - 1) && (currentLevel === segLevel);
+
+                            if (isLast) {
+                                li.classList.add('active');
+                                li.textContent = segName;
+                            } else {
+                                var subBc = segments.slice(0, i + 1).join('|');
+                                var a = document.createElement('a');
+                                var href = '/reports/utilization?level=' + encodeURIComponent(segLevel) +
+                                           '&id=' + encodeURIComponent(segId) +
+                                           '&breadcrumb=' + encodeURIComponent(subBc);
+                                if (startDate) href += '&startDate=' + encodeURIComponent(startDate);
+                                if (endDate) href += '&endDate=' + encodeURIComponent(endDate);
+                                a.href = href;
+                                a.textContent = segName;
+                                li.appendChild(a);
+                            }
+                            bcContainer.appendChild(li);
+                        }
+                    }
+
+                    // Drill-down link click handlers
+                    document.querySelectorAll('.drill-link').forEach(function(link) {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            var level = this.getAttribute('data-level');
+                            var id = this.getAttribute('data-id');
+                            var name = this.getAttribute('data-name');
+
+                            // Build new breadcrumb
+                            var newBc = breadcrumb;
+                            if (newBc && newBc.length > 0) {
+                                newBc += '|';
+                            }
+                            newBc += level + ':' + id + ':' + name;
+
+                            var url = '/reports/utilization?level=' + encodeURIComponent(level) +
+                                      '&id=' + encodeURIComponent(id) +
+                                      '&breadcrumb=' + encodeURIComponent(newBc);
+                            if (startDate) url += '&startDate=' + encodeURIComponent(startDate);
+                            if (endDate) url += '&endDate=' + encodeURIComponent(endDate);
+
+                            window.location.href = url;
+                        });
+                    });
+                });
+            </script>
+        </div>
+
+        <!-- ========== EMPLOYEE: Own Utilization View ========== -->
+        <div th:if="${!hierarchyView}">
+            <!-- Summary Stats -->
+            <div class="row g-3 mb-4" th:if="${summary != null}">
+                <div class="col-md-3">
+                    <div class="stat-card stat-card-primary">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-value" th:text="${summary['totalAvailableHours'] ?: 0}">0</div>
+                        <div class="stat-label">Available Hours</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-card-success">
+                        <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="stat-value" th:text="${summary['totalAllocatedHours'] ?: 0}">0</div>
+                        <div class="stat-label">Allocated Hours</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-card-info">
+                        <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                        <div class="stat-value"><span th:text="${#numbers.formatDecimal(summary['allocationUtilization'] != null ? summary['allocationUtilization'] : 0, 1, 1)}">0</span>%</div>
+                        <div class="stat-label">Allocation Utilization</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-card-warning">
+                        <div class="stat-icon"><i class="fas fa-project-diagram"></i></div>
+                        <div class="stat-value" th:text="${summary['activeProjects'] ?: 0}">0</div>
+                        <div class="stat-label">Active Projects</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Utilization Details -->
+            <div class="card" th:if="${utilization != null}">
+                <div class="card-header">
+                    <h5 class="mb-0">My Utilization Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Overall Utilization</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="me-2">Allocation:</span>
+                                <div class="progress flex-grow-1 me-2" style="height: 12px;">
+                                    <div class="progress-bar" role="progressbar"
+                                         th:with="allocUtil=${utilization['allocationUtilization'] != null ? utilization['allocationUtilization'] : 0}"
+                                         th:style="'width: ' + ${allocUtil > 100 ? 100 : allocUtil} + '%'"
+                                         th:classappend="${allocUtil > 100 ? 'bg-danger' : (allocUtil >= 80 ? 'bg-success' : 'bg-warning')}">
+                                    </div>
+                                </div>
+                                <strong th:with="allocUtil=${utilization['allocationUtilization'] != null ? utilization['allocationUtilization'] : 0}"
+                                        th:text="${#numbers.formatDecimal(allocUtil, 1, 1)} + '%'">0%</strong>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="me-2">Timesheet:</span>
+                                <div class="progress flex-grow-1 me-2" style="height: 12px;">
+                                    <div class="progress-bar bg-info" role="progressbar"
+                                         th:with="tsUtil=${utilization['timesheetUtilization'] != null ? utilization['timesheetUtilization'] : 0}"
+                                         th:style="'width: ' + ${tsUtil > 100 ? 100 : tsUtil} + '%'">
+                                    </div>
+                                </div>
+                                <strong th:with="tsUtil=${utilization['timesheetUtilization'] != null ? utilization['timesheetUtilization'] : 0}"
+                                        th:text="${#numbers.formatDecimal(tsUtil, 1, 1)} + '%'">0%</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Hours Summary</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Available Hours:</td>
+                                    <td><strong th:text="${utilization['totalAvailableHours'] ?: 0}">0</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Allocated Hours:</td>
+                                    <td><strong th:text="${utilization['totalAllocatedHours'] ?: 0}">0</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Logged Hours:</td>
+                                    <td><strong th:text="${utilization['totalLoggedHours'] ?: 0}">0</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Allocations Breakdown -->
+                    <h6>Allocation Breakdown</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Role</th>
+                                    <th>Hours/Day</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="alloc : ${utilization['allocations']}" th:if="${utilization['allocations'] != null}">
+                                    <td th:text="${alloc['projectName'] ?: alloc['projectId']}">Project</td>
+                                    <td th:text="${alloc['role'] ?: '-'}">Role</td>
+                                    <td th:text="${alloc['hoursPerDay'] ?: 0}">0</td>
+                                    <td th:text="${alloc['startDate'] ?: '-'}">-</td>
+                                    <td th:text="${alloc['endDate'] ?: '-'}">-</td>
+                                    <td>
+                                        <span class="badge"
+                                              th:classappend="${alloc['status'] == 'ACTIVE' ? 'bg-success' : 'bg-secondary'}"
+                                              th:text="${alloc['status'] ?: 'N/A'}">Status</span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${utilization['allocations'] == null or utilization['allocations'].isEmpty()}">
+                                    <td colspan="6" class="text-center text-muted">No allocations found</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" th:if="${utilization == null}">
+                <div class="card-body">
+                    <div class="empty-state">
+                        <i class="fas fa-chart-pie"></i>
+                        <h5>No Utilization Data</h5>
+                        <p>No utilization data available for the current period.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

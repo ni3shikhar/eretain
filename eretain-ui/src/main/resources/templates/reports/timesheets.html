@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Timesheet Report - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-clock me-2"></i>Timesheet Report</h2>
+            <a th:href="@{/reports}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Reports
+            </a>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form th:action="@{/reports/timesheets}" method="get" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="startDate" class="form-control" th:value="${startDate}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="endDate" class="form-control" th:value="${endDate}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i>Filter
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a th:href="@{/reports/timesheets}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4" th:if="${summary != null}">
+            <div class="col-md-3">
+                <div class="stat-card stat-card-primary">
+                    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="stat-value" th:text="${summary['totalTimesheets'] ?: 0}">0</div>
+                    <div class="stat-label">Total Timesheets</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-success">
+                    <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+                    <div class="stat-value" th:text="${summary['approvedTimesheets'] ?: 0}">0</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
+                    <div class="stat-value" th:text="${summary['submittedTimesheets'] ?: 0}">0</div>
+                    <div class="stat-label">Pending Review</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-info">
+                    <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="stat-value" th:text="${summary['totalHours'] ?: '0'}">0</div>
+                    <div class="stat-label">Total Hours</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timesheet Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Timesheets</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Week Starting</th>
+                                <th>Week Ending</th>
+                                <th>Total Hours</th>
+                                <th>Status</th>
+                                <th>Submitted On</th>
+                                <th>Approved By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="ts : ${reportData}" th:if="${reportData != null}">
+                                <td th:text="${ts['employeeName']}">Employee</td>
+                                <td th:text="${ts['weekStartDate']}">2024-01-01</td>
+                                <td th:text="${ts['weekEndDate']}">2024-01-07</td>
+                                <td th:text="${ts['totalHours']}">40</td>
+                                <td>
+                                    <span class="badge" 
+                                          th:classappend="'badge-' + ${ts['status']}"
+                                          th:text="${ts['status']}">Status</span>
+                                </td>
+                                <td th:text="${ts['submittedDate'] ?: '-'}">-</td>
+                                <td th:text="${ts['approvedByName'] ?: '-'}">-</td>
+                            </tr>
+                            <tr th:if="${reportData == null or #lists.isEmpty(reportData)}">
+                                <td colspan="7" class="text-center text-muted">No timesheets found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

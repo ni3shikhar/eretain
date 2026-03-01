@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>User - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2>
+                <i class="fas fa-users-cog me-2"></i>
+                <span th:text="${isEdit ? 'Edit' : 'New'}">New</span> User
+            </h2>
+            <a th:href="@{/admin/users}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="@{/admin/users}" method="post">
+                    <input type="hidden" name="id" th:value="${user['id']}" th:if="${isEdit}">
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   th:value="${user['username']}" required minlength="3" maxlength="50"
+                                   th:readonly="${isEdit}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   th:value="${user['email']}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="password" class="form-label">
+                                Password
+                                <span class="text-danger" th:if="${!isEdit}">*</span>
+                                <small class="text-muted" th:if="${isEdit}">(leave blank to keep current)</small>
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   th:required="${!isEdit}" minlength="8">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="firstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="firstName" name="firstName"
+                                   th:value="${user['firstName']}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="lastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="lastName" name="lastName"
+                                   th:value="${user['lastName']}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="employeeId" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employeeId" name="employeeId"
+                                   th:value="${user['employeeId']}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="designation" class="form-label">Designation</label>
+                            <input type="text" class="form-control" id="designation" name="designation"
+                                   th:value="${user['designation']}" placeholder="e.g. Senior Developer">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="phone" name="phone"
+                                   th:value="${user['phone']}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="roles" class="form-label">Role <span class="text-danger">*</span></label>
+                            <select class="form-select" id="roles" name="roles" required>
+                                <option value="">-- Select Role --</option>
+                                <option th:each="r : ${availableRoles}"
+                                        th:value="${r}" th:text="${r}"
+                                        th:selected="${user['roles'] != null and user['roles'].contains(r)}">
+                                    ROLE
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                        <a th:href="@{/admin/users}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

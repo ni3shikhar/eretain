@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Project - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2>
+                <i class="fas fa-project-diagram me-2"></i>
+                <span th:text="${isEdit ? 'Edit' : 'New'}">New</span> Project
+            </h2>
+            <a th:href="@{/projects}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="@{/projects}" method="post">
+                    <input type="hidden" name="id" th:value="${project['id']}" th:if="${isEdit}">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="projectName" class="form-label">Project Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="projectName" name="projectName"
+                                   th:value="${project['name'] != null ? project['name'] : project['projectName']}" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="projectCode" class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="projectCode" name="projectCode"
+                                   th:value="${project['projectCode']}" required maxlength="10">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="">-- Select --</option>
+                                <option th:each="s : ${projectStatuses}"
+                                        th:value="${s}" th:text="${s}"
+                                        th:selected="${project['status'] == s}">STATUS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="projectType" class="form-label">Project Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="projectType" name="projectType" required>
+                                <option value="">-- Select --</option>
+                                <option th:each="t : ${projectTypes}"
+                                        th:value="${t}" th:text="${t}"
+                                        th:selected="${project['projectType'] == t}">TYPE</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="billabilityCategory" class="form-label">Billability</label>
+                            <select class="form-select" id="billabilityCategory" name="billabilityCategory">
+                                <option value="">-- Select --</option>
+                                <option value="BILLABLE" th:selected="${project['billabilityCategory'] == 'BILLABLE'}">BILLABLE</option>
+                                <option value="NON_BILLABLE" th:selected="${project['billabilityCategory'] == 'NON_BILLABLE'}">NON_BILLABLE</option>
+                                <option value="INVESTMENT" th:selected="${project['billabilityCategory'] == 'INVESTMENT'}">INVESTMENT</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="deliveryUnitId" class="form-label">Delivery Unit</label>
+                            <select class="form-select" id="deliveryUnitId" name="deliveryUnitId">
+                                <option value="">-- Select Delivery Unit --</option>
+                                <option th:each="du : ${deliveryUnits}"
+                                        th:value="${du['id']}"
+                                        th:text="${du['unitName'] + ' → ' + du['name'] + ' (' + du['code'] + ')'}"
+                                        th:selected="${project['deliveryUnitId'] != null and project['deliveryUnitId'].toString() == du['id'].toString()}">
+                                    Delivery Unit
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="startDate" class="form-label">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="startDate" name="startDate"
+                                   th:value="${project['startDate']}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate"
+                                   th:value="${project['endDate']}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="clientName" class="form-label">Client Name</label>
+                            <input type="text" class="form-control" id="clientName" name="clientName"
+                                   th:value="${project['clientName']}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="3" th:text="${project['description']}"></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                        <a th:href="@{/projects}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

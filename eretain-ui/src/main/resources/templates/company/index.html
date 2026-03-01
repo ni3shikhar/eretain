@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Company Structure - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-building me-2"></i>Company Structure</h2>
+        </div>
+
+        <div class="row g-4">
+            <!-- Business Units Card -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-city fa-3x text-primary"></i>
+                        </div>
+                        <h4 class="card-title">Business Units</h4>
+                        <p class="display-6 fw-bold text-primary" th:text="${buCount != null ? buCount : 0}">0</p>
+                        <p class="card-text text-muted">Manage top-level business units that form the organizational structure.</p>
+                        <a th:href="@{/company/business-units}" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-1"></i>Manage Business Units
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Units Card -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-sitemap fa-3x text-success"></i>
+                        </div>
+                        <h4 class="card-title">Units</h4>
+                        <p class="display-6 fw-bold text-success" th:text="${unitCount != null ? unitCount : 0}">0</p>
+                        <p class="card-text text-muted">Manage units within business units for team organization.</p>
+                        <a th:href="@{/company/units}" class="btn btn-success">
+                            <i class="fas fa-arrow-right me-1"></i>Manage Units
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Units Card -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-truck fa-3x text-info"></i>
+                        </div>
+                        <h4 class="card-title">Delivery Units</h4>
+                        <p class="display-6 fw-bold text-info" th:text="${duCount != null ? duCount : 0}">0</p>
+                        <p class="card-text text-muted">Manage delivery units responsible for project execution.</p>
+                        <a th:href="@{/company/delivery-units}" class="btn btn-info text-white">
+                            <i class="fas fa-arrow-right me-1"></i>Manage Delivery Units
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

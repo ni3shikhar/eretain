@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Delivery Units - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-truck me-2"></i>Delivery Units</h2>
+            <a th:href="@{/company/delivery-units/new}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Add Delivery Unit
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table table-hover" th:if="${deliveryUnits != null and !deliveryUnits.isEmpty()}">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Code</th>
+                            <th>Parent Unit</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="du, iterStat : ${deliveryUnits}">
+                            <td th:text="${iterStat.count}">1</td>
+                            <td th:text="${du['name']}">Web Team</td>
+                            <td><span class="badge bg-secondary" th:text="${du['code']}">WEB</span></td>
+                            <td th:text="${du['unitName'] ?: du['unitId']}">Development</td>
+                            <td th:text="${du['description']}">Description</td>
+                            <td class="action-btns">
+                                <a th:href="@{/company/delivery-units/{id}/edit(id=${du['id']})}"
+                                   class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form th:action="@{/company/delivery-units/{id}/delete(id=${du['id']})}"
+                                      method="post" style="display:inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            data-confirm="Are you sure you want to delete this delivery unit?">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="empty-state" th:if="${deliveryUnits == null or deliveryUnits.isEmpty()}">
+                    <i class="fas fa-truck"></i>
+                    <h5>No Delivery Units</h5>
+                    <p>Create your first delivery unit to get started.</p>
+                    <a th:href="@{/company/delivery-units/new}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Delivery Unit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Project Report - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-project-diagram me-2"></i>Project Report</h2>
+            <a th:href="@{/reports}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Reports
+            </a>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form th:action="@{/reports/projects}" method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="ACTIVE" th:selected="${selectedStatus == 'ACTIVE'}">Active</option>
+                            <option value="COMPLETED" th:selected="${selectedStatus == 'COMPLETED'}">Completed</option>
+                            <option value="ON_HOLD" th:selected="${selectedStatus == 'ON_HOLD'}">On Hold</option>
+                            <option value="CANCELLED" th:selected="${selectedStatus == 'CANCELLED'}">Cancelled</option>
+                            <option value="PLANNING" th:selected="${selectedStatus == 'PLANNING'}">Planning</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i>Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4" th:if="${summary != null}">
+            <div class="col-md-3">
+                <div class="stat-card stat-card-primary">
+                    <div class="stat-icon"><i class="fas fa-folder"></i></div>
+                    <div class="stat-value" th:text="${summary['totalProjects'] ?: 0}">0</div>
+                    <div class="stat-label">Total Projects</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-success">
+                    <div class="stat-icon"><i class="fas fa-play-circle"></i></div>
+                    <div class="stat-value" th:text="${summary['activeProjects'] ?: 0}">0</div>
+                    <div class="stat-label">Active</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-info">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-value" th:text="${summary['completedProjects'] ?: 0}">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon"><i class="fas fa-pause-circle"></i></div>
+                    <div class="stat-value" th:text="${summary['onHoldProjects'] ?: 0}">0</div>
+                    <div class="stat-label">On Hold</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project List -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Projects</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Code</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Billability</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Client</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="project : ${reportData}" th:if="${reportData != null}">
+                                <td th:text="${project['projectName'] ?: project['name']}">Project Name</td>
+                                <td th:text="${project['projectCode'] ?: project['code']}">CODE</td>
+                                <td th:text="${project['projectType'] ?: '-'}">Type</td>
+                                <td>
+                                    <span class="badge" 
+                                          th:classappend="'badge-' + ${project['status']}"
+                                          th:text="${project['status']}">Status</span>
+                                </td>
+                                <td th:text="${project['billabilityCategory']}">Billable</td>
+                                <td th:text="${project['startDate']}">2024-01-01</td>
+                                <td th:text="${project['endDate']}">2024-12-31</td>
+                                <td th:text="${project['clientName']}">Client</td>
+                            </tr>
+                            <tr th:if="${reportData == null or #lists.isEmpty(reportData)}">
+                                <td colspan="8" class="text-center text-muted">No projects found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

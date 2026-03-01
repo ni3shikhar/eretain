@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title layout:title-pattern="$CONTENT_TITLE - eRetain">eRetain</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/webjars/font-awesome/css/all.min.css}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
+                <i class="fas fa-cubes me-2"></i>eRetain
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                        <span class="nav-link text-light">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span sec:authentication="principal.username">User</span>
+                        </span>
+                    </li>
+                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                        <span class="badge bg-light text-primary me-3" th:text="${#authentication.principal.roles[0]}">ROLE</span>
+                    </li>
+                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                        <a class="nav-link text-light" th:href="@{/logout}">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar" sec:authorize="isAuthenticated()">
+            <div class="sidebar-content">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/dashboard}" th:classappend="${activeMenu == 'dashboard'} ? 'active'">
+                            <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+                        </a>
+                    </li>
+
+                    <!-- Admin Only: Company Structure -->
+                    <li class="nav-item" sec:authorize="hasRole('ADMINISTRATOR')">
+                        <a class="nav-link" th:href="@{/company}" th:classappend="${activeMenu == 'company'} ? 'active'">
+                            <i class="fas fa-building"></i><span>Company Structure</span>
+                        </a>
+                    </li>
+
+                    <!-- All: Projects -->
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/projects}" th:classappend="${activeMenu == 'projects'} ? 'active'">
+                            <i class="fas fa-project-diagram"></i><span>Projects</span>
+                        </a>
+                    </li>
+
+                    <!-- All: Allocations -->
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/allocations}" th:classappend="${activeMenu == 'allocations'} ? 'active'">
+                            <i class="fas fa-user-clock"></i><span>Allocations</span>
+                        </a>
+                    </li>
+
+                    <!-- All: Timesheets -->
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/timesheets}" th:classappend="${activeMenu == 'timesheets'} ? 'active'">
+                            <i class="fas fa-clock"></i><span>Timesheets</span>
+                        </a>
+                    </li>
+
+                    <!-- All: Reports -->
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/reports}" th:classappend="${activeMenu == 'reports'} ? 'active'">
+                            <i class="fas fa-chart-bar"></i><span>Reports</span>
+                        </a>
+                    </li>
+
+                    <!-- Admin Only: Rate Cards -->
+                    <li class="nav-item" sec:authorize="hasRole('ADMINISTRATOR')">
+                        <a class="nav-link" th:href="@{/rate-cards}" th:classappend="${activeMenu == 'rate-cards'} ? 'active'">
+                            <i class="fas fa-dollar-sign"></i><span>Rate Cards</span>
+                        </a>
+                    </li>
+
+                    <!-- Admin Only: User Management -->
+                    <li class="nav-item" sec:authorize="hasRole('ADMINISTRATOR')">
+                        <a class="nav-link" th:href="@{/admin/users}" th:classappend="${activeMenu == 'users'} ? 'active'">
+                            <i class="fas fa-users-cog"></i><span>User Management</span>
+                        </a>
+                    </li>
+
+                    <!-- Admin & PMO: AI Chat -->
+                    <li class="nav-item" sec:authorize="hasAnyRole('ADMINISTRATOR','PMO')">
+                        <a class="nav-link" th:href="@{/chat}" th:classappend="${activeMenu == 'chat'} ? 'active'">
+                            <i class="fas fa-robot"></i><span>AI Assistant</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Notification container for toast-style alerts (fixed position, outside main content flow) -->
+        <div id="notification-area">
+                <!-- Success messages (supports both "success" and "successMessage" attribute names) -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show notification-toast" role="alert">
+                    <div class="notification-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="notification-content">
+                        <strong>Success</strong>
+                        <span th:text="${successMessage}"></span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="notification-timer"></div>
+                </div>
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show notification-toast" role="alert">
+                    <div class="notification-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="notification-content">
+                        <strong>Success</strong>
+                        <span th:text="${success}"></span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="notification-timer"></div>
+                </div>
+
+                <!-- Error messages (supports both "error" and "errorMessage" attribute names) -->
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show notification-toast" role="alert">
+                    <div class="notification-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="notification-content">
+                        <strong>Error</strong>
+                        <span th:text="${errorMessage}"></span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="notification-timer"></div>
+                </div>
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show notification-toast" role="alert">
+                    <div class="notification-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="notification-content">
+                        <strong>Error</strong>
+                        <span th:text="${error}"></span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="notification-timer"></div>
+                </div>
+
+                <!-- Warning messages -->
+                <div th:if="${warningMessage != null or warning != null}" class="alert alert-warning alert-dismissible fade show notification-toast" role="alert">
+                    <div class="notification-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="notification-content">
+                        <strong>Warning</strong>
+                        <span th:text="${warningMessage != null ? warningMessage : warning}"></span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="notification-timer"></div>
+                </div>
+
+                <!-- Info messages -->
+                <div th:if="${infoMessage != null or info != null}" class="alert alert-info alert-dismissible fade show notification-toast" role="alert">
+                    <div class="notification-icon"><i class="fas fa-info-circle"></i></div>
+                    <div class="notification-content">
+                        <strong>Info</strong>
+                        <span th:text="${infoMessage != null ? infoMessage : info}"></span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="notification-timer"></div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <main class="content">
+                <div layout:fragment="content"></div>
+            </main>
+    </div>
+
+    <!-- Floating AI Chat Button (Admin & PMO only) -->
+    <a th:href="@{/chat}" class="chat-fab" title="AI Assistant"
+       sec:authorize="hasAnyRole('ADMINISTRATOR','PMO')">
+        <i class="fas fa-robot"></i>
+    </a>
+
+    <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/app.js}"></script>
+    <div layout:fragment="scripts"></div>
+</body>
+</html>

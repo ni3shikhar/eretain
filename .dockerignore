@@ -1,0 +1,12 @@
+**/target/
+**/.idea/
+**/.vscode/
+**/*.iml
+**/.git/
+**/node_modules/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+*.md
+LICENSE
+.gitignore

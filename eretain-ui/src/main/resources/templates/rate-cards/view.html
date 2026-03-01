@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Rate Card Details - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-dollar-sign me-2"></i>Rate Card Details</h2>
+            <div class="d-flex gap-2">
+                <a th:href="@{/rate-cards/{id}/edit(id=${rateCard['id']})}" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                <a th:href="@{/rate-cards}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to List
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th class="text-muted" style="width: 40%">Role Name</th>
+                                <td><strong th:text="${rateCard['roleName']}">Software Engineer</strong></td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Currency</th>
+                                <td th:text="${rateCard['currency'] ?: 'USD'}">USD</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Description</th>
+                                <td th:text="${rateCard['description'] ?: '-'}">Description</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Status</th>
+                                <td>
+                                    <span class="badge" th:classappend="${rateCard['active']} ? 'bg-success' : 'bg-secondary'"
+                                          th:text="${rateCard['active']} ? 'Active' : 'Inactive'">Active</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5 class="mb-3"><i class="fas fa-tags me-2"></i>Hourly Rates</h5>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <h6 class="card-subtitle mb-2 text-info">Audax Rate</h6>
+                                <h2 class="card-title mb-0">
+                                    <span class="text-muted fs-5" th:text="${rateCard['currency'] ?: '$'}">$</span>
+                                    <span th:text="${#numbers.formatDecimal(rateCard['audaxRate'], 1, 2)}">75.00</span>
+                                    <span class="text-muted fs-6">/hr</span>
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-success">
+                            <div class="card-body text-center">
+                                <h6 class="card-subtitle mb-2 text-success">Fixed Fee Rate</h6>
+                                <h2 class="card-title mb-0">
+                                    <span class="text-muted fs-5" th:text="${rateCard['currency'] ?: '$'}">$</span>
+                                    <span th:text="${#numbers.formatDecimal(rateCard['fixedFeeRate'], 1, 2)}">85.00</span>
+                                    <span class="text-muted fs-6">/hr</span>
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <h6 class="card-subtitle mb-2 text-warning">T&amp;M Rate</h6>
+                                <h2 class="card-title mb-0">
+                                    <span class="text-muted fs-5" th:text="${rateCard['currency'] ?: '$'}">$</span>
+                                    <span th:text="${#numbers.formatDecimal(rateCard['tmRate'], 1, 2)}">95.00</span>
+                                    <span class="text-muted fs-6">/hr</span>
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

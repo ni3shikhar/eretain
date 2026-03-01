@@ -1,0 +1,207 @@
+version: '3.8'
+
+services:
+  # =================== PostgreSQL Databases ===================
+  postgres:
+    image: postgres:16-alpine
+    container_name: eretain-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+    networks:
+      - eretain-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =================== Eureka Discovery Server ===================
+  discovery-server:
+    build:
+      context: .
+      dockerfile: eretain-discovery-server/Dockerfile
+    container_name: eretain-discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - eretain-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # =================== API Gateway ===================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: eretain-api-gateway/Dockerfile
+    container_name: eretain-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - eretain-network
+
+  # =================== Auth Service ===================
+  auth-service:
+    build:
+      context: .
+      dockerfile: eretain-auth-service/Dockerfile
+    container_name: eretain-auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/eretain_auth
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - eretain-network
+
+  # =================== Company Structure Service ===================
+  company-service:
+    build:
+      context: .
+      dockerfile: eretain-company-service/Dockerfile
+    container_name: eretain-company-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/eretain_company
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - eretain-network
+
+  # =================== Project Service ===================
+  project-service:
+    build:
+      context: .
+      dockerfile: eretain-project-service/Dockerfile
+    container_name: eretain-project-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/eretain_project
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - eretain-network
+
+  # =================== Allocation Service ===================
+  allocation-service:
+    build:
+      context: .
+      dockerfile: eretain-allocation-service/Dockerfile
+    container_name: eretain-allocation-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/eretain_allocation
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - eretain-network
+
+  # =================== Timesheet Service ===================
+  timesheet-service:
+    build:
+      context: .
+      dockerfile: eretain-timesheet-service/Dockerfile
+    container_name: eretain-timesheet-service
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/eretain_timesheet
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - eretain-network
+
+  # =================== Reporting Service ===================
+  reporting-service:
+    build:
+      context: .
+      dockerfile: eretain-reporting-service/Dockerfile
+    container_name: eretain-reporting-service
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/eretain_reporting
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - eretain-network
+
+  # =================== UI Service (Thymeleaf) ===================
+  ui-service:
+    build:
+      context: .
+      dockerfile: eretain-ui/Dockerfile
+    container_name: eretain-ui
+    ports:
+      - "9000:9000"
+    environment:
+      - ERETAIN_API_GATEWAY_URL=http://api-gateway:8080
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2025-01-01-preview}
+    depends_on:
+      api-gateway:
+        condition: service_started
+    networks:
+      - eretain-network
+
+volumes:
+  postgres_data:
+
+networks:
+  eretain-network:
+    driver: bridge

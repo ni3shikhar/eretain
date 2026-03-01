@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/main}">
+<head><title>Allocation Details - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2><i class="fas fa-tasks me-2"></i>Allocation Details</h2>
+            <div>
+                <a th:href="@{/allocations/{id}/edit(id=${allocation['id']})}"
+                   class="btn btn-primary me-2" sec:authorize="hasAnyRole('ADMINISTRATOR','PMO')">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                <a th:href="@{/allocations}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">Employee</strong>
+                        <span th:text="${allocation['employeeName'] ?: allocation['employeeId']}">John Doe</span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">Project</strong>
+                        <span th:text="${allocation['projectName'] ?: allocation['projectId']}">Project Alpha</span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">Role</strong>
+                        <span th:text="${allocation['roleName'] ?: 'N/A'}">Developer</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">Hours/Day</strong>
+                        <span th:text="${allocation['hoursPerDay']}">8.0</span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">Status</strong>
+                        <span class="badge-status"
+                              th:classappend="'badge-' + ${allocation['status']}"
+                              th:text="${allocation['status']}">ACTIVE</span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">Billability</strong>
+                        <span th:text="${allocation['billabilityCategory'] ?: 'N/A'}">BILLABLE</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">Start Date</strong>
+                        <span th:text="${allocation['startDate']}">2024-01-01</span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <strong class="text-muted d-block small">End Date</strong>
+                        <span th:text="${allocation['endDate']}">2024-12-31</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

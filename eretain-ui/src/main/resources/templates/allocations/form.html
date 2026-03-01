@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head><title>Allocation - eRetain</title></head>
+<body>
+    <div layout:fragment="content">
+        <div class="page-header">
+            <h2>
+                <i class="fas fa-tasks me-2"></i>
+                <span th:text="${isEdit ? 'Edit' : 'New'}">New</span> Allocation
+            </h2>
+            <a th:href="@{/allocations}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="@{/allocations}" method="post">
+                    <input type="hidden" name="id" th:value="${allocation['id']}" th:if="${isEdit}">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employeeId" class="form-label">Employee <span class="text-danger">*</span></label>
+                            <select class="form-select" id="employeeId" name="employeeId" required>
+                                <option value="">-- Select Employee --</option>
+                                <option th:each="emp : ${employees}"
+                                        th:value="${emp['id']}"
+                                        th:text="${(emp['firstName'] != null ? emp['firstName'] + ' ' + emp['lastName'] : emp['username']) + (emp['designation'] != null ? ' (' + emp['designation'] + ')' : '')}"
+                                        th:selected="${allocation['employeeId'] != null and allocation['employeeId'].toString() == emp['id'].toString()}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="projectId" class="form-label">Project <span class="text-danger">*</span></label>
+                            <select class="form-select" id="projectId" name="projectId" required>
+                                <option value="">-- Select Project --</option>
+                                <option th:each="p : ${projects}"
+                                        th:value="${p['id']}"
+                                        th:text="${p['name'] != null ? p['name'] : p['projectName']}"
+                                        th:selected="${allocation['projectId'] != null and allocation['projectId'].toString() == p['id'].toString()}">
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            <select class="form-select" id="role" name="role">
+                                <option value="">-- Select Role --</option>
+                                <option th:each="r : ${roles}"
+                                        th:value="${r}"
+                                        th:text="${r}"
+                                        th:selected="${allocation['roleName'] != null and allocation['roleName'].toString() == r.toString()}">
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="hoursPerDay" class="form-label">Hours/Day <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="hoursPerDay" name="hoursPerDay"
+                                   th:value="${allocation['hoursPerDay']}" required min="0.5" max="8" step="0.5"
+                                   placeholder="Max 8 hrs/day">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="">-- Select --</option>
+                                <option th:each="s : ${allocationStatuses}"
+                                        th:value="${s}" th:text="${s}"
+                                        th:selected="${allocation['status'] == s}">STATUS</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="startDate" class="form-label">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="startDate" name="startDate"
+                                   th:value="${allocation['startDate']}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="endDate" class="form-label">End Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="endDate" name="endDate"
+                                   th:value="${allocation['endDate']}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="billabilityCategory" class="form-label">Billability</label>
+                            <select class="form-select" id="billabilityCategory" name="billabilityCategory">
+                                <option value="">-- Select --</option>
+                                <option value="BILLABLE" th:selected="${allocation['billabilityCategory'] == 'BILLABLE'}">BILLABLE</option>
+                                <option value="NON_BILLABLE" th:selected="${allocation['billabilityCategory'] == 'NON_BILLABLE'}">NON_BILLABLE</option>
+                                <option value="INVESTMENT" th:selected="${allocation['billabilityCategory'] == 'INVESTMENT'}">INVESTMENT</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Validation Rules:</strong> Maximum 8 hours/day and 40 hours/week per employee across all allocations.
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                        <a th:href="@{/allocations}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-populate Role based on Employee selection -->
+    <script th:inline="javascript">
+        (function() {
+            // Build a map of employee ID -> designation from the server data
+            var employeeDesignations = {};
+            /*[# th:each="emp : ${employees}"]*/
+            employeeDesignations[/*[[${emp['id']}]]*/ ''] = /*[[${emp['designation']}]]*/ '';
+            /*[/]*/
+
+            var employeeSelect = document.getElementById('employeeId');
+            var roleSelect = document.getElementById('role');
+
+            if (employeeSelect && roleSelect) {
+                employeeSelect.addEventListener('change', function() {
+                    var empId = this.value;
+                    if (empId && employeeDesignations[empId]) {
+                        var designation = employeeDesignations[empId];
+                        if (!designation) return;
+                        var lowerDesig = designation.toLowerCase();
+                        var matched = false;
+
+                        // Try exact match against available role options
+                        for (var i = 1; i < roleSelect.options.length; i++) {
+                            if (roleSelect.options[i].value === designation) {
+                                roleSelect.value = designation;
+                                matched = true;
+                                break;
+                            }
+                        }
+                        // Try case-insensitive match
+                        if (!matched) {
+                            for (var i = 1; i < roleSelect.options.length; i++) {
+                                if (roleSelect.options[i].value.toLowerCase() === lowerDesig) {
+                                    roleSelect.value = roleSelect.options[i].value;
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                        }
+                        // Try partial match (designation contains role name or vice versa)
+                        if (!matched) {
+                            for (var i = 1; i < roleSelect.options.length; i++) {
+                                var roleVal = roleSelect.options[i].value.toLowerCase();
+                                if (lowerDesig.indexOf(roleVal) !== -1 || roleVal.indexOf(lowerDesig) !== -1) {
+                                    roleSelect.value = roleSelect.options[i].value;
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
