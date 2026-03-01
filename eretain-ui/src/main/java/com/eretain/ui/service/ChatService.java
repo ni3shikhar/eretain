@@ -45,6 +45,11 @@ public class ChatService {
 
     @PostConstruct
     public void init() {
+        if (apiKey == null || apiKey.isBlank() || apiKey.equals("your-api-key-here")) {
+            log.warn("Azure OpenAI API key is not configured. Chat functionality will be disabled.");
+            this.client = null;
+            return;
+        }
         this.client = new OpenAIClientBuilder()
                 .endpoint(endpoint)
                 .credential(new AzureKeyCredential(apiKey))
@@ -56,6 +61,9 @@ public class ChatService {
      * Process a user message and return the AI response.
      */
     public String chat(String sessionId, String userMessage, String token) {
+        if (client == null) {
+            return "Chat is currently unavailable. Azure OpenAI API key is not configured.";
+        }
         // Get or create conversation history
         List<ChatRequestMessage> messages = conversationHistory.computeIfAbsent(sessionId, k -> {
             List<ChatRequestMessage> initial = new ArrayList<>();

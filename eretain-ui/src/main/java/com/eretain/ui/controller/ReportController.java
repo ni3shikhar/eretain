@@ -30,6 +30,7 @@ public class ReportController {
         return "reports/index";
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/projects")
     public String projectReport(@RequestParam(required = false) String status,
                                 HttpServletRequest request, Model model) {
@@ -41,7 +42,31 @@ public class ReportController {
             }
             Map<String, Object> result = apiService.get(url, token);
             if (apiService.isSuccess(result)) {
-                model.addAttribute("reportData", apiService.extractData(result));
+                Object data = apiService.extractData(result);
+                model.addAttribute("reportData", data);
+
+                // Compute summary counts for chart
+                if (data instanceof java.util.List) {
+                    java.util.List<Map<String, Object>> projects = (java.util.List<Map<String, Object>>) data;
+                    Map<String, Long> statusCounts = new java.util.LinkedHashMap<>();
+                    statusCounts.put("ACTIVE", 0L);
+                    statusCounts.put("PROPOSED", 0L);
+                    statusCounts.put("ON_HOLD", 0L);
+                    statusCounts.put("COMPLETED", 0L);
+                    statusCounts.put("CANCELLED", 0L);
+                    for (Map<String, Object> p : projects) {
+                        String s = String.valueOf(p.getOrDefault("status", "UNKNOWN"));
+                        statusCounts.merge(s, 1L, Long::sum);
+                    }
+                    model.addAttribute("statusCounts", statusCounts);
+
+                    Map<String, Object> summary = new java.util.HashMap<>();
+                    summary.put("totalProjects", projects.size());
+                    summary.put("activeProjects", statusCounts.getOrDefault("ACTIVE", 0L));
+                    summary.put("completedProjects", statusCounts.getOrDefault("COMPLETED", 0L));
+                    summary.put("onHoldProjects", statusCounts.getOrDefault("ON_HOLD", 0L));
+                    model.addAttribute("summary", summary);
+                }
             }
         } catch (Exception e) {
             model.addAttribute("error", "Unable to load project report");

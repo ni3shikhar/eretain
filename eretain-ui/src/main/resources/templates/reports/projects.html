@@ -68,6 +68,48 @@
             </div>
         </div>
 
+        <!-- Charts Row -->
+        <div class="row g-3 mb-4" th:if="${statusCounts != null}">
+            <!-- Status Distribution Doughnut -->
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Status Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="position:relative; height:300px;">
+                            <canvas id="projectStatusPie"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Weekly Project Status Schedule -->
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-calendar-week me-2"></i>Projects by Status — Weekly Schedule</h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="position:relative; height:350px;">
+                            <canvas id="weeklyStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Per-Project Horizontal Bar Chart -->
+        <div class="card mb-4" th:if="${reportData != null and !reportData.isEmpty()}">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Project Overview (color-coded by status)</h5>
+            </div>
+            <div class="card-body">
+                <div th:style="'position:relative; height: ' + ${#lists.size(reportData) * 38 + 80} + 'px; min-height: 200px;'">
+                    <canvas id="projectBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- Project List -->
         <div class="card">
             <div class="card-header">
@@ -111,6 +153,271 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div layout:fragment="scripts">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+        <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusCounts = /*[[${statusCounts}]]*/ {};
+            const reportData = /*[[${reportData}]]*/ [];
+
+            // Color mapping for statuses
+            const statusColors = {
+                'ACTIVE':    { bg: '#22c55e', border: '#16a34a' },
+                'PROPOSED':  { bg: '#3b82f6', border: '#2563eb' },
+                'ON_HOLD':   { bg: '#f59e0b', border: '#d97706' },
+                'COMPLETED': { bg: '#8b5cf6', border: '#7c3aed' },
+                'CANCELLED': { bg: '#ef4444', border: '#dc2626' }
+            };
+            const defaultColor = { bg: '#6b7280', border: '#4b5563' };
+            function getColor(status) { return statusColors[status] || defaultColor; }
+
+            // --- Status Distribution Doughnut Chart (fixed sizing) ---
+            if (statusCounts && document.getElementById('projectStatusPie')) {
+                const labels = Object.keys(statusCounts).filter(k => statusCounts[k] > 0);
+                const values = labels.map(k => statusCounts[k]);
+                const bgColors = labels.map(s => getColor(s).bg);
+
+                new Chart(document.getElementById('projectStatusPie'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels.map(l => l.replace(/_/g, ' ')),
+                        datasets: [{
+                            data: values,
+                            backgroundColor: bgColors,
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 800 },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { padding: 12, usePointStyle: true, pointStyle: 'circle', font: { size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const total = values.reduce((a, b) => a + b, 0);
+                                        const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                                        return ' ' + ctx.label + ': ' + ctx.raw + ' (' + pct + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- Weekly Project Status Schedule (Stacked Bar) ---
+            if (reportData && reportData.length > 0 && document.getElementById('weeklyStatusChart')) {
+                // Helper: get Monday of the week for a given date
+                function getMonday(d) {
+                    const date = new Date(d);
+                    const day = date.getDay();
+                    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+                    return new Date(date.setDate(diff));
+                }
+                function formatWeek(d) {
+                    const mon = getMonday(d);
+                    const m = String(mon.getMonth() + 1).padStart(2, '0');
+                    const dd = String(mon.getDate()).padStart(2, '0');
+                    return mon.getFullYear() + '-' + m + '-' + dd;
+                }
+
+                // Determine the date range across all projects
+                const today = new Date();
+                let minDate = new Date(today);
+                let maxDate = new Date(today);
+
+                reportData.forEach(function(p) {
+                    if (p.startDate) {
+                        const sd = new Date(p.startDate);
+                        if (sd < minDate) minDate = sd;
+                    }
+                    if (p.endDate) {
+                        const ed = new Date(p.endDate);
+                        if (ed > maxDate) maxDate = ed;
+                    }
+                });
+
+                // Generate weekly labels from minDate to maxDate
+                const weekLabels = [];
+                const weekDates = [];
+                let cursor = getMonday(minDate);
+                const end = getMonday(maxDate);
+                // Limit to 52 weeks max
+                let weekCount = 0;
+                while (cursor <= end && weekCount < 52) {
+                    const wk = formatWeek(cursor);
+                    weekLabels.push('Wk ' + wk.substring(5)); // e.g. "Wk 03-01"
+                    weekDates.push(new Date(cursor));
+                    cursor.setDate(cursor.getDate() + 7);
+                    weekCount++;
+                }
+
+                // For each status, count how many projects are active in each week
+                const allStatuses = ['ACTIVE', 'PROPOSED', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
+                const datasets = allStatuses.map(function(status) {
+                    const data = weekDates.map(function(weekStart) {
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekEnd.getDate() + 6);
+                        let count = 0;
+                        reportData.forEach(function(p) {
+                            if (p.status !== status) return;
+                            const pStart = p.startDate ? new Date(p.startDate) : null;
+                            const pEnd = p.endDate ? new Date(p.endDate) : null;
+                            // Project overlaps with this week if:
+                            // project start <= week end AND project end >= week start
+                            if (pStart && pEnd) {
+                                if (pStart <= weekEnd && pEnd >= weekStart) count++;
+                            } else if (pStart && !pEnd) {
+                                if (pStart <= weekEnd) count++;
+                            } else if (!pStart && pEnd) {
+                                if (pEnd >= weekStart) count++;
+                            } else {
+                                count++; // No dates — show in all weeks
+                            }
+                        });
+                        return count;
+                    });
+                    const color = getColor(status);
+                    return {
+                        label: status.replace(/_/g, ' '),
+                        data: data,
+                        backgroundColor: color.bg,
+                        borderColor: color.border,
+                        borderWidth: 1,
+                        borderRadius: 3
+                    };
+                }).filter(function(ds) {
+                    return ds.data.some(function(v) { return v > 0; });
+                });
+
+                new Chart(document.getElementById('weeklyStatusChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: weekLabels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 800 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 15, font: { size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    footer: function(items) {
+                                        const total = items.reduce(function(s, i) { return s + i.raw; }, 0);
+                                        return 'Total: ' + total + ' projects';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                ticks: { font: { size: 11 }, maxRotation: 45, minRotation: 45 },
+                                grid: { display: false },
+                                title: { display: true, text: 'Week Starting', font: { size: 12, weight: 'bold' } }
+                            },
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                ticks: { stepSize: 1, font: { size: 12 } },
+                                grid: { color: 'rgba(0,0,0,0.06)' },
+                                title: { display: true, text: 'Number of Projects', font: { size: 12, weight: 'bold' } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- Per-Project Horizontal Bar Chart (color-coded by status) ---
+            if (reportData && reportData.length > 0 && document.getElementById('projectBarChart')) {
+                const projectLabels = reportData.map(p => (p.projectCode || p.code || '') + ' - ' + (p.projectName || p.name || ''));
+                const projectStatuses = reportData.map(p => p.status || 'UNKNOWN');
+                const bgColors = projectStatuses.map(s => getColor(s).bg);
+                const borderColors = projectStatuses.map(s => getColor(s).border);
+
+                const barValues = reportData.map(p => {
+                    if (p.totalAllocatedHours && p.totalAllocatedHours > 0) return p.totalAllocatedHours;
+                    if (p.budget && p.budget > 0) return p.budget;
+                    return 1;
+                });
+                const valueLabel = reportData.some(p => p.totalAllocatedHours > 0) ? 'Allocated Hours' :
+                                   reportData.some(p => p.budget > 0) ? 'Budget' : 'Project';
+
+                new Chart(document.getElementById('projectBarChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: projectLabels,
+                        datasets: [{
+                            label: valueLabel,
+                            data: barValues,
+                            backgroundColor: bgColors,
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            borderRadius: 4,
+                            barThickness: 24
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 800 },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel: function(ctx) {
+                                        return 'Status: ' + projectStatuses[ctx.dataIndex].replace(/_/g, ' ');
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(0,0,0,0.06)' },
+                                title: { display: true, text: valueLabel, font: { size: 13, weight: 'bold' } }
+                            },
+                            y: {
+                                ticks: { font: { size: 12 }, autoSkip: false },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+
+                // Status legend below per-project chart
+                const legendHtml = Object.entries(statusColors).map(function(entry) {
+                    return '<span class="me-3"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:'
+                        + entry[1].bg + ';margin-right:5px;vertical-align:middle;"></span>'
+                        + '<span style="vertical-align:middle;font-size:13px;">' + entry[0].replace(/_/g, ' ') + '</span></span>';
+                }).join('');
+                const chartCard = document.getElementById('projectBarChart')?.closest('.card-body');
+                if (chartCard) {
+                    const legendDiv = document.createElement('div');
+                    legendDiv.className = 'text-center mt-3 pt-2 border-top';
+                    legendDiv.innerHTML = legendHtml;
+                    chartCard.appendChild(legendDiv);
+                }
+            }
+        });
+        /*]]>*/
+        </script>
     </div>
 </body>
 </html>
